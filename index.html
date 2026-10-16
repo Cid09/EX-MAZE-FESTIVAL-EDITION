@@ -3172,15 +3172,15 @@ function renderLoop() {
                 maze[y][x] === 1
             ) {
 
-                ctx.fillStyle =
-                    themeColor === "#00aaff" ? "#172b3b" : themeColor;
+                // Screenshot-matched EX:MAZE walls: near-black teal with subtle cyan grid.
+                ctx.fillStyle = "#0b1b1e";
 
             }
 
             else {
 
-                ctx.fillStyle =
-                    "#f4f8fb";
+                // Keep corridors dark; the player and edges provide the light.
+                ctx.fillStyle = "#102d31";
 
             }
 
@@ -3193,7 +3193,7 @@ function renderLoop() {
             ) {
 
                 ctx.fillStyle =
-                    "#ff3030";
+                    "#102d31";
 
             }
 
@@ -3213,7 +3213,7 @@ function renderLoop() {
     /* 벽 네온 */
 
     ctx.strokeStyle =
-        themeColor + "33";
+        "rgba(48, 207, 220, 0.14)";
 
     ctx.lineWidth = 1;
 
@@ -3504,14 +3504,14 @@ function renderLoop() {
 
 
     ctx.shadowColor =
-        "#008cff";
+        "#55d9ff";
 
     ctx.shadowBlur =
         15;
 
 
     ctx.fillStyle =
-        "#0077ff";
+        "#55d9ff";
 
 
     ctx.beginPath();
