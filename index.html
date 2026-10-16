@@ -2757,11 +2757,12 @@ function makeMaze(size) {
                 seen.add(key); prev.set(key, [cx, cy]); queue.push([nx, ny]);
             }
         }
-        if (!found) {
-            // A simple L-shaped fallback always connects start and exit.
-            for (let x = 1; x <= size - 2; x++) m[1][x] = 0;
-            for (let y = 1; y <= size - 2; y++) m[y][size - 2] = 0;
-        }
+        // Always carve a guaranteed corridor to the exit. This is deliberately
+        // unconditional: stage modifiers/random openings must never leave an
+        // exit tile unreachable because of an unusual generated layout.
+        for (let x = 1; x <= size - 2; x++) m[1][x] = 0;
+        for (let y = 1; y <= size - 2; y++) m[y][size - 2] = 0;
+        m[size - 2][size - 2] = 0;
     }
 
     // RANDOM MAZE: 기존 미로에 추가 통로를 일부 열어 매번 다른 구조 생성
@@ -2932,6 +2933,15 @@ function processInput() {
    이동
 ========================================================= */
 
+function checkGoalReached() {
+    if (!player || !Number.isFinite(gSize)) return false;
+    if (player.x !== gSize - 2 || player.y !== gSize - 2) return false;
+    const modal = document.getElementById('clear-modal');
+    if (!modal || modal.style.display === 'flex') return true;
+    checkClear();
+    return true;
+}
+
 function move(dir) {
 
     if(!isStarted)
@@ -3031,13 +3041,7 @@ function move(dir) {
 
     // Check the exit after every move attempt. Guard against duplicate clear
     // calls while the result panel is already open.
-    if (
-        player.x === gSize - 2 &&
-        player.y === gSize - 2 &&
-        document.getElementById('clear-modal').style.display !== 'flex'
-    ) {
-        checkClear();
-    }
+    checkGoalReached();
 
 }
 
@@ -3169,6 +3173,12 @@ function renderLoop() {
         document.getElementById('timer-bar').style.width='100%';
     }
 
+
+    // Backup goal check in the animation loop as well as after movement.
+    // This prevents a missed clear if input and rendering happen on adjacent frames.
+    if (isStarted && player && player.x === gSize - 2 && player.y === gSize - 2) {
+        checkGoalReached();
+    }
 
     /* EX:MAZE SOLO camera follow */
     const targetCamX = player.x - viewCells / 2 + 0.5;
