@@ -1,0 +1,3973 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+      initial-scale=1.0,
+      maximum-scale=1.0,
+      user-scalable=no,
+      viewport-fit=cover">
+
+<title>EX:MAZE</title>
+
+<style>
+
+/* =========================================================
+   기본
+========================================================= */
+
+:root {
+    --blue: #00aaff;
+    --blue-dark: #003b66;
+    --gold: #f1c40f;
+    --gold-light: #ffe680;
+    --red: #ff3030;
+    --bg: #02070d;
+    --panel: rgba(4, 15, 27, 0.92);
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+    outline: none;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    background:
+        radial-gradient(
+            circle at 50% 40%,
+            #06223a 0%,
+            #02070d 55%,
+            #000 100%
+        );
+
+    color: white;
+
+    font-family:
+        Arial,
+        "Malgun Gothic",
+        sans-serif;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* =========================================================
+   상단 HUD
+========================================================= */
+
+.logo-header {
+
+    position: relative;
+
+    height: 76px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding:
+        0 22px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(0, 51, 102, 0.96),
+            rgba(0, 18, 35, 0.96)
+        );
+
+    border-bottom:
+        2px solid var(--gold);
+
+    box-shadow:
+        0 0 20px rgba(0, 170, 255, 0.25),
+        0 4px 25px rgba(0, 0, 0, 0.7);
+
+    z-index: 100;
+}
+
+
+/* 왼쪽 */
+
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.game-title {
+
+    font-size: 17px;
+
+    font-weight: 900;
+
+    letter-spacing: 2px;
+
+    color: var(--gold);
+
+    text-shadow:
+        0 0 8px rgba(241, 196, 15, 0.7);
+}
+
+.game-subtitle {
+
+    font-size: 10px;
+
+    letter-spacing: 3px;
+
+    color: #75cfff;
+
+    opacity: 0.85;
+}
+
+
+/* 오른쪽 */
+
+.header-right {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+}
+
+.stage-box {
+
+    text-align: right;
+}
+
+.stage-label {
+
+    display: block;
+
+    font-size: 9px;
+
+    color: #78cfff;
+
+    letter-spacing: 2px;
+}
+
+#stage-display {
+
+    font-size: 19px;
+
+    font-weight: 900;
+
+    color: var(--gold);
+
+    text-shadow:
+        0 0 10px rgba(241, 196, 15, 0.7);
+}
+
+
+/* 타이머 */
+
+.timer-box {
+
+    min-width: 95px;
+
+    padding: 7px 12px;
+
+    border:
+        1px solid rgba(0, 170, 255, 0.45);
+
+    border-radius: 8px;
+
+    background:
+        rgba(0, 0, 0, 0.35);
+
+    text-align: center;
+}
+
+.timer-label {
+
+    display: block;
+
+    font-size: 8px;
+
+    color: #75cfff;
+
+    letter-spacing: 2px;
+}
+
+#timer-display {
+
+    font-size: 18px;
+
+    font-weight: 900;
+
+    color: white;
+}
+
+
+/* =========================================================
+   게임 영역
+========================================================= */
+
+#game-container {
+
+    flex: 1;
+
+    position: relative;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    padding: 12px;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(0, 80, 130, 0.15),
+            transparent 65%
+        );
+}
+
+
+/* 배경 격자 */
+
+#game-container::before {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background-image:
+        linear-gradient(
+            rgba(0, 170, 255, 0.035) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(0, 170, 255, 0.035) 1px,
+            transparent 1px
+        );
+
+    background-size: 35px 35px;
+
+    pointer-events: none;
+}
+
+
+/* 캔버스 */
+
+canvas {
+
+    position: relative;
+
+    background: #101a24;
+
+    border:
+        3px solid rgba(0, 170, 255, 0.65);
+
+    border-radius: 12px;
+
+    z-index: 5;
+
+    box-shadow:
+        0 0 10px rgba(0, 170, 255, 0.5),
+        0 0 35px rgba(0, 100, 200, 0.25),
+        0 20px 50px rgba(0, 0, 0, 0.7);
+
+    transition:
+        transform 0.15s ease;
+}
+
+
+/* =========================================================
+   현재 모드 표시
+========================================================= */
+
+#mode-hud {
+
+    position: absolute;
+
+    top: 14px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 20;
+
+    padding: 6px 16px;
+
+    border:
+        1px solid rgba(0, 170, 255, 0.45);
+
+    border-radius: 20px;
+
+    background:
+        rgba(0, 8, 15, 0.82);
+
+    color: #8ddcff;
+
+    font-size: 11px;
+
+    letter-spacing: 1px;
+
+    box-shadow:
+        0 0 15px rgba(0, 170, 255, 0.2);
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   상태 메시지
+========================================================= */
+
+#status-msg {
+
+    position: absolute;
+
+    top: 58px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: max-content;
+
+    max-width: 90%;
+
+    z-index: 1000;
+
+    padding: 10px 22px;
+
+    border-radius: 8px;
+
+    background:
+        rgba(0, 0, 0, 0.75);
+
+    border:
+        1px solid rgba(255, 255, 255, 0.15);
+
+    font-weight: 900;
+
+    font-size: 17px;
+
+    color: var(--gold);
+
+    text-shadow:
+        0 0 10px currentColor;
+
+    pointer-events: none;
+
+    opacity: 0;
+
+    transition: opacity 0.2s;
+}
+
+
+/* =========================================================
+   타임어택 게이지
+========================================================= */
+
+#timer-bar-wrapper {
+
+    position: absolute;
+
+    left: 50%;
+
+    bottom: 10px;
+
+    transform: translateX(-50%);
+
+    width: min(500px, 70%);
+
+    height: 5px;
+
+    background:
+        rgba(255,255,255,0.08);
+
+    border-radius: 10px;
+
+    overflow: hidden;
+
+    z-index: 20;
+
+    pointer-events: none;
+}
+
+#timer-bar {
+
+    width: 100%;
+
+    height: 100%;
+
+    background:
+        linear-gradient(
+            90deg,
+            #00aaff,
+            #f1c40f
+        );
+
+    box-shadow:
+        0 0 10px rgba(0,170,255,0.8);
+
+    transition:
+        width 0.1s linear;
+}
+
+
+/* =========================================================
+   위험 테두리
+========================================================= */
+
+.red-light-border {
+
+    position: fixed;
+
+    inset: 0;
+
+    border:
+        10px solid var(--red);
+
+    pointer-events: none;
+
+    display: none;
+
+    z-index: 1000;
+
+    box-shadow:
+        inset 0 0 80px rgba(255, 0, 0, 0.8);
+
+    animation:
+        dangerPulse 0.9s infinite alternate;
+}
+
+@keyframes dangerPulse {
+
+    from {
+        opacity: 0.35;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+/* =========================================================
+   추격전 경고
+========================================================= */
+
+#danger-hud {
+
+    position: absolute;
+
+    top: 105px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 30;
+
+    display: none;
+
+    padding: 8px 20px;
+
+    color: #ff4d4d;
+
+    font-weight: 900;
+
+    letter-spacing: 2px;
+
+    border:
+        1px solid rgba(255, 50, 50, 0.6);
+
+    background:
+        rgba(80, 0, 0, 0.35);
+
+    border-radius: 8px;
+
+    animation:
+        dangerText 0.7s infinite alternate;
+
+    pointer-events: none;
+}
+
+@keyframes dangerText {
+
+    from {
+        opacity: 0.45;
+    }
+
+    to {
+        opacity: 1;
+        text-shadow:
+            0 0 15px red;
+    }
+}
+
+
+/* =========================================================
+   공통 오버레이
+========================================================= */
+
+.overlay {
+
+    position: fixed;
+
+    inset: 0;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    text-align: center;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(0, 35, 65, 0.78),
+            rgba(0, 0, 0, 0.97)
+        );
+
+    backdrop-filter:
+        blur(5px);
+
+    z-index: 99999;
+}
+
+
+/* 시작 화면 */
+
+#start-modal {
+
+    animation:
+        overlayIn 0.6s ease;
+}
+
+@keyframes overlayIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+/* =========================================================
+   로비 업그레이드
+========================================================= */
+
+#start-modal {
+    background:
+        radial-gradient(circle at 50% 35%, rgba(0, 150, 255, 0.16), transparent 35%),
+        radial-gradient(circle at 15% 80%, rgba(241, 196, 15, 0.08), transparent 30%),
+        linear-gradient(rgba(1,8,15,.72), rgba(0,0,0,.96));
+    overflow-y: auto;
+}
+
+#start-modal::before,
+#start-modal::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+}
+
+#start-modal::before {
+    inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+    opacity: .35;
+}
+
+#start-modal::after {
+    width: 70vw;
+    height: 70vw;
+    max-width: 700px;
+    max-height: 700px;
+    border: 1px solid rgba(0,170,255,.10);
+    border-radius: 50%;
+    box-shadow: 0 0 80px rgba(0,170,255,.08);
+}
+
+.start-panel {
+    position: relative;
+    z-index: 2;
+    max-height: 92vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.lobby-topline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    color: #668297;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+.lobby-online { color: #6ee7a8; }
+.lobby-online i {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: #6ee7a8;
+    box-shadow: 0 0 8px #6ee7a8;
+}
+
+.lobby-logo {
+    padding: 4px 0 18px;
+}
+
+.lobby-logo-small {
+    color: #83d9ff;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 7px;
+}
+
+.lobby-logo-main {
+    margin-top: 3px;
+    color: #fff;
+    font-size: clamp(34px, 9vw, 50px);
+    line-height: .95;
+    font-weight: 1000;
+    letter-spacing: -2px;
+    text-shadow: 0 0 12px rgba(0,170,255,.8), 0 0 35px rgba(0,170,255,.25);
+}
+
+.lobby-logo-main span {
+    color: var(--gold);
+    text-shadow: 0 0 14px rgba(241,196,15,.55);
+}
+
+.lobby-logo-line {
+    width: 170px;
+    height: 1px;
+    margin: 12px auto 9px;
+    background: linear-gradient(90deg, transparent, var(--blue), var(--gold), transparent);
+}
+
+.lobby-logo-sub {
+    color: #70899d;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 3px;
+}
+
+.lobby-stats {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 7px;
+    margin: 0 0 18px;
+}
+
+.lobby-stats div {
+    padding: 9px 5px 8px;
+    border: 1px solid rgba(96,150,185,.2);
+    border-radius: 9px;
+    background: rgba(2,15,26,.72);
+}
+
+.lobby-stats strong {
+    display: block;
+    color: #dff6ff;
+    font-size: 17px;
+    line-height: 1;
+}
+
+.lobby-stats small {
+    display: block;
+    margin-top: 4px;
+    color: #60798b;
+    font-size: 7px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.start-description b { color: #dff6ff; }
+
+.mode-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mode-section-title::before {
+    content: "";
+    width: 4px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--blue);
+    box-shadow: 0 0 8px var(--blue);
+}
+
+.start-panel {
+
+    width: min(500px, 94%);
+
+    padding: 25px 25px 22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(10, 30, 50, 0.96),
+            rgba(2, 9, 16, 0.98)
+        );
+
+    border:
+        1px solid rgba(0, 170, 255, 0.45);
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 0 30px rgba(0, 170, 255, 0.18),
+        0 25px 70px rgba(0,0,0,0.8);
+}
+
+
+.start-title {
+
+    margin: 0 0 7px;
+
+    font-size: 30px;
+
+    color: var(--gold);
+
+    text-shadow:
+        0 0 15px rgba(241,196,15,0.7);
+}
+
+.start-description {
+
+    margin-bottom: 25px;
+
+    color: #8da4b8;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   모드 선택
+========================================================= */
+
+.mode-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 9px;
+
+    margin-bottom: 20px;
+}
+
+.mode-btn {
+
+    min-height: 52px;
+
+    padding: 10px;
+
+    border:
+        1px solid #33495c;
+
+    border-radius: 10px;
+
+    color: #7e91a0;
+
+    font-size: 13px;
+
+    font-weight: 900;
+
+    cursor: pointer;
+
+    background:
+        linear-gradient(
+            145deg,
+            #182631,
+            #0d151c
+        );
+
+    transition:
+        0.2s;
+}
+
+.mode-btn:hover {
+
+    border-color: #55758d;
+}
+
+.mode-btn.disabled,
+.mode-btn.support-disabled {
+    opacity: 0.28;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.mode-section-title {
+    margin: 4px 0 9px;
+    color: #75cfff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+.mode-note {
+    margin: -8px 0 14px;
+    color: #61798a;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.mode-btn.active {
+
+    color: white;
+
+    border-color: var(--gold);
+
+    background:
+        linear-gradient(
+            145deg,
+            #3b3418,
+            #1c1b10
+        );
+
+    box-shadow:
+        0 0 15px rgba(241,196,15,0.35),
+        inset 0 0 15px rgba(241,196,15,0.06);
+}
+
+
+/* =========================================================
+   시작 버튼
+========================================================= */
+
+.lobby-route {
+    margin: 2px 0 14px;
+    padding: 10px 11px;
+    border: 1px solid rgba(0,170,255,.18);
+    border-radius: 10px;
+    background: rgba(0,12,22,.55);
+}
+
+.route-head {
+    display: flex;
+    justify-content: space-between;
+    color: #7191a5;
+    font-size: 7px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+}
+
+.route-dots {
+    display: flex;
+    align-items: center;
+    margin: 9px 0 6px;
+}
+
+.route-dots i {
+    flex: 1;
+    height: 3px;
+    background: #244052;
+    position: relative;
+}
+
+.route-dots i:first-child, .route-dots i:last-child {
+    background: var(--gold);
+    box-shadow: 0 0 6px rgba(241,196,15,.5);
+}
+
+.route-dots i::after {
+    content: "";
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    top: -1px;
+    right: 0;
+    border-radius: 50%;
+    background: #5b788b;
+}
+
+.route-dots i:first-child::after, .route-dots i:last-child::after { background: var(--gold); }
+
+.route-caption {
+    color: #506979;
+    font-size: 8px;
+}
+
+.start-btn {
+
+    width: 100%;
+
+    padding: 17px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #dcae00,
+            #ffe05c,
+            #dcae00
+        );
+
+    color: #111;
+
+    font-size: 20px;
+
+    font-weight: 900;
+
+    letter-spacing: 2px;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 0 15px rgba(241,196,15,0.55),
+        0 8px 25px rgba(0,0,0,0.4);
+
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
+}
+
+.start-btn:hover {
+
+    transform:
+        translateY(-2px)
+        scale(1.02);
+
+    box-shadow:
+        0 0 25px rgba(241,196,15,0.8);
+}
+
+.start-btn:active {
+
+    transform:
+        scale(0.97);
+}
+
+
+/* =========================================================
+   스테이지 시작 연출
+========================================================= */
+
+#stage-intro {
+
+    display: none;
+}
+
+.intro-line {
+
+    width: 220px;
+
+    height: 1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            var(--blue),
+            transparent
+        );
+
+    margin: 12px 0;
+}
+
+.intro-small {
+
+    color: #79d4ff;
+
+    letter-spacing: 5px;
+
+    font-size: 12px;
+}
+
+.intro-stage {
+
+    font-size: 64px;
+
+    font-weight: 900;
+
+    color: white;
+
+    text-shadow:
+        0 0 15px #00aaff,
+        0 0 35px rgba(0,170,255,0.7);
+
+    animation:
+        stageZoom 0.8s ease;
+}
+
+.intro-name {
+
+    color: var(--gold);
+
+    font-size: 18px;
+
+    letter-spacing: 4px;
+
+    font-weight: 900;
+}
+
+@keyframes stageZoom {
+
+    from {
+        transform: scale(1.5);
+
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+
+        opacity: 1;
+    }
+}
+
+
+/* =========================================================
+   클리어 화면
+========================================================= */
+
+#clear-modal {
+
+    display: none;
+}
+
+.clear-panel {
+
+    width: min(430px, 90%);
+
+    padding: 35px 25px;
+
+    border:
+        1px solid rgba(241,196,15,0.55);
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(35,30,8,0.97),
+            rgba(5,8,12,0.98)
+        );
+
+    box-shadow:
+        0 0 40px rgba(241,196,15,0.25);
+}
+
+.clear-title {
+
+    font-size: 40px;
+
+    font-weight: 900;
+
+    color: var(--gold);
+
+    text-shadow:
+        0 0 20px rgba(241,196,15,0.7);
+}
+
+.clear-stage {
+
+    margin-top: 10px;
+
+    color: white;
+
+    font-size: 18px;
+}
+
+.clear-message {
+
+    margin-top: 25px;
+
+    color: #8ca3b5;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   조작 영역
+========================================================= */
+
+#controls-wrapper {
+
+    position: relative;
+
+    flex-shrink: 0;
+
+    min-height: 205px;
+
+    padding:
+        15px 0 35px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(5,18,30,0.98),
+            rgba(1,5,9,1)
+        );
+
+    border-top:
+        1px solid rgba(0,170,255,0.5);
+
+    box-shadow:
+        0 -10px 30px rgba(0,0,0,0.45);
+
+    z-index: 50;
+}
+
+.controls-label {
+
+    position: absolute;
+
+    top: 7px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    color: #4f7085;
+
+    font-size: 9px;
+
+    letter-spacing: 3px;
+}
+
+#controls {
+
+    display: grid;
+
+    grid-template-areas:
+        ". up ."
+        "left center right"
+        ". down .";
+
+    gap: 8px;
+
+    justify-content: center;
+
+    align-items: center;
+
+    margin-top: 12px;
+}
+
+.btn {
+
+    width: 64px;
+
+    height: 64px;
+
+    border-radius: 18px;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    font-size: 27px;
+
+    color: white;
+
+    border:
+        1px solid rgba(90,160,200,0.45);
+
+    background:
+        linear-gradient(
+            145deg,
+            #183247,
+            #0c1822
+        );
+
+    box-shadow:
+        0 5px 12px rgba(0,0,0,0.5),
+        inset 0 0 10px rgba(0,170,255,0.05);
+
+    transition:
+        transform 0.08s,
+        background 0.08s;
+}
+
+.btn:active {
+
+    transform:
+        scale(0.9);
+
+    background:
+        linear-gradient(
+            145deg,
+            #285c7c,
+            #123247
+        );
+
+    box-shadow:
+        0 0 15px rgba(0,170,255,0.5);
+}
+
+.center-btn {
+
+    grid-area: center;
+
+    width: 48px;
+
+    height: 48px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            #f1c40f,
+            #755f00
+        );
+
+    box-shadow:
+        0 0 15px rgba(241,196,15,0.35);
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   모바일
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .logo-header {
+
+        height: 65px;
+
+        padding:
+            0 12px;
+    }
+
+    .game-title {
+
+        font-size: 13px;
+
+        letter-spacing: 1px;
+    }
+
+    .game-subtitle {
+
+        font-size: 7px;
+
+        letter-spacing: 2px;
+    }
+
+    #stage-display {
+
+        font-size: 15px;
+    }
+
+    .timer-box {
+
+        min-width: 75px;
+
+        padding: 5px 8px;
+    }
+
+    #timer-display {
+
+        font-size: 15px;
+    }
+
+    #mode-hud {
+
+        top: 8px;
+
+        font-size: 9px;
+
+        padding:
+            5px 10px;
+    }
+
+    #danger-hud {
+
+        top: 45px;
+
+        font-size: 11px;
+    }
+
+    #controls-wrapper {
+
+        min-height: 190px;
+
+        padding-bottom: 25px;
+    }
+
+    .btn {
+
+        width: 58px;
+
+        height: 58px;
+
+        font-size: 24px;
+    }
+
+    .center-btn {
+
+        width: 42px;
+
+        height: 42px;
+    }
+
+    .intro-stage {
+
+        font-size: 50px;
+    }
+
+    .start-title {
+
+        font-size: 25px;
+    }
+}
+
+
+/* =========================================================
+   작은 휴대폰
+========================================================= */
+
+@media (max-height: 700px) {
+
+    #controls-wrapper {
+
+        min-height: 160px;
+
+        padding-top: 10px;
+    }
+
+    .btn {
+
+        width: 52px;
+
+        height: 52px;
+    }
+
+    .center-btn {
+
+        width: 38px;
+
+        height: 38px;
+    }
+}
+
+
+/* =========================================================
+   로비 메뉴 / 기록 / 스테이지 선택
+========================================================= */
+.lobby-nav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0 18px}
+.lobby-nav-btn{padding:12px 8px;border:1px solid rgba(0,170,255,.3);border-radius:10px;background:linear-gradient(145deg,#14283a,#09121b);color:#cceeff;font-weight:900;font-size:11px;letter-spacing:1px;cursor:pointer;transition:.2s}
+.lobby-nav-btn:hover{border-color:#00aaff;box-shadow:0 0 16px rgba(0,170,255,.18);transform:translateY(-1px)}
+#lobby-config{margin-top:4px}
+.lobby-back{width:100%;margin-top:8px;padding:10px;border:1px solid #30485a;border-radius:9px;background:#0d171f;color:#7891a3;font-weight:900;cursor:pointer}
+.stage-select-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0;max-height:58vh;overflow:auto}
+.stage-card{min-height:62px;border:1px solid #294456;border-radius:10px;background:#0b1720;color:#bfeaff;cursor:pointer;font-weight:900}
+.stage-card span{display:block;font-size:17px;color:#fff}.stage-card small{font-size:7px;color:#60798b;letter-spacing:1px}
+.stage-card.locked{opacity:.35;cursor:not-allowed;filter:grayscale(1)}
+.stage-card.cleared{border-color:rgba(241,196,15,.55);box-shadow:0 0 10px rgba(241,196,15,.1)}
+
+.name-entry{margin:14px 0 16px;text-align:left}
+.name-entry label{display:block;color:#7edfff;font-size:10px;font-weight:900;letter-spacing:.16em;margin-bottom:7px}
+.name-entry input{box-sizing:border-box;width:100%;padding:13px 14px;border:1px solid #28617b;border-radius:10px;background:#06121b;color:#f2fbff;font-size:16px;font-weight:800;outline:none}
+.name-entry input:focus{border-color:#55d9ff;box-shadow:0 0 16px #55d9ff22}
+.name-entry small{display:block;color:#7895a8;font-size:10px;margin-top:7px;line-height:1.5}
+.leaderboard-list{margin:14px 0;max-height:58vh;overflow:auto;text-align:left}
+.leader-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:9px;align-items:center;padding:11px 9px;border-bottom:1px solid rgba(255,255,255,.08)}
+.leader-rank{font-size:18px;font-weight:1000;color:#55d9ff}
+.leader-name{min-width:0;overflow-wrap:anywhere;color:#fff;font-weight:900}
+.leader-meta{display:block;color:#7895a8;font-size:9px;margin-top:4px}
+.leader-score{text-align:right;color:#ffe36b;font-size:12px;font-weight:1000;white-space:nowrap}
+.leader-empty{padding:24px 10px;text-align:center;color:#7895a8;font-size:12px;line-height:1.8}
+@media(max-width:520px){.leader-row{grid-template-columns:28px minmax(0,1fr) auto;gap:6px;padding:10px 5px}.leader-score{font-size:10px}}
+
+.records-list{margin:14px 0;max-height:58vh;overflow:auto;text-align:left}
+.record-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:9px;padding:9px;border-bottom:1px solid rgba(255,255,255,.07)}
+.record-row b{color:#fff}.record-row small{display:block;color:#60798b;font-size:8px}.record-time{color:var(--gold);font-weight:900}
+.rank-sss{color:#fff;text-shadow:0 0 10px #fff}.rank-ss{color:#7de3ff}.rank-s{color:#ffe36b}.rank-a{color:#6ee7a8}.rank-b{color:#b7c4cc}.rank-c{color:#7c8992}
+.clear-rank{font-size:34px;font-weight:1000;margin:8px 0;text-shadow:0 0 18px currentColor}
+.clear-record{font-size:11px;color:#8da4b8;margin-bottom:6px}
+@media(max-width:520px){.lobby-nav{grid-template-columns:1fr 1fr}.stage-select-grid{grid-template-columns:repeat(3,1fr)}}
+
+
+
+/* iPad / mobile: disable long-press text selection/copy callout on game UI */
+html, body, button, a, canvas, .overlay, .panel, .clear-panel, #controls-wrapper {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+input, textarea, select {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* Festival cross-device input safety */
+html,body,#mazeCanvas,.game-shell,.canvas-wrap{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+#mazeCanvas{ touch-action:none; }
+button{ touch-action:manipulation; }
+input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
+@media (max-width:520px){.start-panel{width:min(94vw,520px);max-height:92dvh;overflow:auto;padding:18px 14px}.name-entry input{font-size:16px}.leaderboard-list{max-height:52dvh}}
+
+
+/* FESTIVAL SPLASH SCREEN — desktop display + responsive tablets/phones */
+#start-modal{isolation:isolate;background:#03080f;overflow-y:auto;padding:clamp(10px,2.5vw,28px);box-sizing:border-box}
+#start-modal::before{inset:0;z-index:-2;opacity:.8;background:linear-gradient(rgba(3,10,18,.72),rgba(2,7,13,.94)),repeating-linear-gradient(0deg,transparent 0 39px,rgba(65,190,255,.075) 40px),repeating-linear-gradient(90deg,transparent 0 39px,rgba(65,190,255,.075) 40px);animation:mazeDrift 18s linear infinite}
+#start-modal::after{content:"";position:absolute;z-index:-1;inset:8% 12%;width:auto;height:auto;max-width:none;max-height:none;border:1px solid rgba(61,197,255,.1);border-radius:26px;box-shadow:0 0 90px rgba(0,151,255,.08),inset 0 0 90px rgba(0,151,255,.035);animation:framePulse 5s ease-in-out infinite}
+@keyframes mazeDrift{from{background-position:0 0,0 0,0 0}to{background-position:0 0,0 120px,120px 0}}
+@keyframes framePulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.006)}}
+.festival-start-panel{width:min(1120px,96vw);max-height:94vh;overflow:auto;padding:clamp(18px,3vw,38px);border:1px solid rgba(67,201,255,.34);border-radius:22px;background:linear-gradient(130deg,rgba(7,22,35,.97),rgba(3,9,17,.98) 60%,rgba(12,19,30,.97));box-shadow:0 0 65px rgba(0,160,255,.15),0 30px 100px #000;box-sizing:border-box;text-align:left}
+.festival-home{display:block}
+.festival-topline{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid rgba(106,182,219,.16);color:#86a5b9;font-size:11px;font-weight:900;letter-spacing:.16em}
+.festival-brand{display:flex;align-items:center;gap:10px;color:#eafaff}
+.brand-mark{display:grid;place-items:center;width:32px;height:32px;border:1px solid #55d9ff;border-radius:8px;color:#55d9ff;font-size:13px;box-shadow:0 0 18px #55d9ff25}
+.system-pill{display:flex;align-items:center;gap:7px;color:#78efb0;font-size:10px;white-space:nowrap}
+.system-pill i,.live-dot{width:7px;height:7px;border-radius:50%;background:#78efb0;box-shadow:0 0 12px #78efb0;display:inline-block;animation:livePulse 1.7s infinite}
+@keyframes livePulse{50%{opacity:.35;box-shadow:0 0 2px #78efb0}}
+.festival-hero-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(310px,.85fr);gap:clamp(24px,5vw,72px);align-items:center;padding:clamp(22px,4vw,48px) 0 28px}
+.festival-hero-copy{min-width:0}
+.festival-eyebrow{display:flex;align-items:center;gap:9px;color:#6fdcff;font-size:10px;font-weight:900;letter-spacing:.19em}
+.festival-eyebrow span{width:24px;height:2px;background:#55d9ff;box-shadow:0 0 12px #55d9ff}
+.festival-title{margin:18px 0 0;color:#f4fbff;font-size:clamp(58px,9.4vw,116px);font-weight:1000;letter-spacing:-.075em;line-height:.9;text-shadow:0 0 25px #25bfff55,0 0 75px #007dff24;white-space:nowrap}
+.festival-title span{color:#ffd65a;text-shadow:0 0 25px #ffca3a66}
+.festival-title-line{width:min(300px,70%);height:2px;margin:18px 0;background:linear-gradient(90deg,#55d9ff,#ffd65a,transparent)}
+.festival-hero-copy h1{margin:0;color:#eaf6ff;font-size:clamp(23px,3.2vw,39px);line-height:1.12;font-weight:950;letter-spacing:-.035em}
+.festival-hero-copy h1 em{font-style:normal;color:#62dfff}
+.festival-lead{margin:17px 0 22px;color:#8fa9bc;font-size:clamp(12px,1.3vw,15px);line-height:1.8}
+.festival-stat-row{display:grid;grid-template-columns:repeat(3,minmax(0,100px));gap:9px;margin:20px 0 23px}
+.festival-stat-row div{padding:12px 13px;border:1px solid rgba(89,179,221,.2);border-radius:9px;background:linear-gradient(140deg,#0a1b29aa,#07111aaa)}
+.festival-stat-row b{display:block;color:#e8f9ff;font-size:24px;line-height:1.1}.festival-stat-row small{display:block;margin-top:6px;color:#65849a;font-size:8px;font-weight:900;letter-spacing:.14em}
+.festival-live-note{display:flex;align-items:center;gap:9px;color:#7897aa;font-size:9px;font-weight:800;letter-spacing:.1em;line-height:1.6}
+.festival-entry-card{padding:clamp(20px,2.8vw,30px);border:1px solid rgba(82,188,232,.28);border-radius:16px;background:linear-gradient(145deg,rgba(13,33,49,.94),rgba(4,13,23,.98));box-shadow:inset 0 1px rgba(255,255,255,.04),0 18px 45px #0005;min-width:0}
+.entry-card-top{display:flex;justify-content:space-between;gap:10px;color:#5f9bb7;font-size:9px;font-weight:900;letter-spacing:.15em}
+.entry-card-top span:last-child{color:#526b7c}
+.entry-icon{display:grid;place-items:center;width:52px;height:52px;margin:25px 0 17px;border:1px solid rgba(85,217,255,.45);border-radius:14px;color:#65e0ff;font-size:37px;line-height:1;box-shadow:0 0 25px #55d9ff1a;background:#071c2a}
+.festival-entry-card h2{margin:0;color:#f3fbff;font-size:clamp(23px,2.4vw,30px);font-weight:1000;letter-spacing:-.04em}
+.festival-entry-card>p{margin:9px 0 0;color:#809caf;font-size:12px;line-height:1.7}
+.festival-name-entry{margin:22px 0 14px}
+.festival-name-entry label{font-size:10px;letter-spacing:.13em}
+.festival-name-entry input{padding:16px;border-radius:9px;border-color:#24516a;background:#030d16;font-size:17px}
+.festival-name-entry input::placeholder{color:#4d687a}
+.festival-start-btn{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:17px 20px;border:1px solid #ffe17a;border-radius:10px;background:linear-gradient(100deg,#ffd65a,#ffed9b 55%,#ffca3b);color:#111b22;font-size:17px;letter-spacing:.12em;box-shadow:0 0 25px #ffd65a30,0 8px 20px #0005}
+.festival-start-btn b{display:grid;place-items:center;width:29px;height:29px;border-radius:7px;background:#1b2931;color:#ffe27b;font-size:18px}
+.entry-hint{margin:12px 0 0;color:#648196;font-size:10px;text-align:center}.entry-hint span{color:#ffd65a;margin-right:5px}
+.festival-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:23px;padding-top:17px;border-top:1px solid rgba(100,165,197,.15)}
+.festival-secondary-actions .lobby-nav-btn{padding:11px 7px;font-size:9px;letter-spacing:.07em}
+.festival-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:16px;border-top:1px solid rgba(106,182,219,.14);color:#3f5d70;font-size:8px;font-weight:900;letter-spacing:.13em}
+@media(min-width:1000px) and (min-height:700px){.festival-start-panel{max-height:92vh}.festival-hero-grid{min-height:430px}}
+@media(max-width:760px){#start-modal{justify-content:flex-start;padding:10px}.festival-start-panel{width:100%;max-height:none;padding:18px;border-radius:16px}.festival-hero-grid{grid-template-columns:1fr;gap:26px;padding:26px 0 20px}.festival-title{font-size:clamp(58px,16vw,94px)}.festival-hero-copy h1{font-size:clamp(25px,6vw,34px)}.festival-entry-card{padding:21px}.festival-footer{font-size:7px}.festival-stat-row{grid-template-columns:repeat(3,minmax(0,1fr));max-width:360px}}
+@media(max-width:420px){.festival-topline{font-size:9px}.system-pill{font-size:8px}.festival-title{font-size:55px}.festival-secondary-actions{grid-template-columns:1fr 1fr}.festival-stat-row b{font-size:21px}.festival-live-note{font-size:8px}}
+@media(prefers-reduced-motion:reduce){#start-modal::before,#start-modal::after,.system-pill i,.live-dot{animation:none!important}}
+
+/* EXTRA FESTIVAL SHOWCASE ANIMATIONS */
+#start-modal{background:radial-gradient(ellipse at 18% 42%,rgba(0,139,255,.12),transparent 42%),radial-gradient(ellipse at 82% 54%,rgba(255,197,62,.07),transparent 32%),#03080f}
+#start-modal .festival-start-panel{animation:panelArrive .85s cubic-bezier(.2,.8,.2,1) both}
+@keyframes panelArrive{from{opacity:0;transform:translateY(18px) scale(.985);filter:blur(5px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+#start-modal .festival-title{position:relative;animation:titleGlow 3.4s ease-in-out infinite;transform-origin:left center}
+@keyframes titleGlow{0%,100%{text-shadow:0 0 18px #25bfff44,0 0 55px #007dff18}50%{text-shadow:0 0 30px #25bfff99,0 0 88px #007dff55}}
+#start-modal .festival-title::after{content:'EX:MAZE';position:absolute;inset:0;color:#55d9ff;opacity:0;pointer-events:none;clip-path:inset(45% 0 42% 0);animation:titleGlitch 7s steps(1,end) infinite}
+@keyframes titleGlitch{0%,91%,94%,100%{opacity:0;transform:translateX(0)}92%{opacity:.7;transform:translateX(4px)}93%{opacity:.4;transform:translateX(-3px)}}
+#start-modal .festival-title-line{background-size:220% 100%;animation:lineSweep 3.5s linear infinite}
+@keyframes lineSweep{from{background-position:100% 0}to{background-position:-120% 0}}
+#start-modal .festival-entry-card{animation:cardFloat 5s ease-in-out infinite;position:relative;overflow:hidden}
+#start-modal .festival-entry-card::before{content:'';position:absolute;top:-80%;left:-45%;width:35%;height:260%;transform:rotate(22deg);background:linear-gradient(90deg,transparent,rgba(102,222,255,.075),transparent);animation:cardSweep 6s ease-in-out infinite;pointer-events:none}
+@keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes cardSweep{0%,55%{left:-45%}100%{left:125%}}
+#start-modal .festival-start-btn{position:relative;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;animation:buttonPulse 2.6s ease-in-out infinite}
+#start-modal .festival-start-btn::after{content:'';position:absolute;inset:0;left:-120%;width:65%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:buttonShine 4s ease-in-out infinite}
+#start-modal .festival-start-btn:hover{transform:translateY(-2px);box-shadow:0 0 34px #ffd65a66,0 10px 24px #0007;filter:brightness(1.04)}
+@keyframes buttonPulse{0%,100%{box-shadow:0 0 20px #ffd65a24,0 8px 20px #0005}50%{box-shadow:0 0 32px #ffd65a48,0 8px 20px #0005}}
+@keyframes buttonShine{0%,65%{left:-120%}100%{left:150%}}
+#start-modal .festival-stat-row div{animation:statRise .7s both;transition:border-color .2s ease,transform .2s ease}
+#start-modal .festival-stat-row div:nth-child(2){animation-delay:.12s}#start-modal .festival-stat-row div:nth-child(3){animation-delay:.24s}
+#start-modal .festival-stat-row div:hover{transform:translateY(-3px);border-color:#55d9ff77}
+@keyframes statRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+#start-modal .entry-icon{animation:iconBob 3s ease-in-out infinite,iconGlow 2.5s ease-in-out infinite}
+@keyframes iconBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+@keyframes iconGlow{0%,100%{box-shadow:0 0 16px #55d9ff16}50%{box-shadow:0 0 28px #55d9ff55}}
+@media(prefers-reduced-motion:reduce){#start-modal .festival-start-panel,#start-modal .festival-title,#start-modal .festival-title::after,#start-modal .festival-title-line,#start-modal .festival-entry-card,#start-modal .festival-entry-card::before,#start-modal .festival-start-btn,#start-modal .festival-start-btn::after,#start-modal .festival-stat-row div,#start-modal .entry-icon{animation:none!important;transition:none!important}}
+
+
+</style>
+</head>
+
+
+<body>
+
+
+<!-- =======================================================
+     위험 테두리
+======================================================= -->
+
+<div
+    class="red-light-border"
+    id="red-light-ui">
+</div>
+
+
+<!-- =======================================================
+     상단 HUD
+======================================================= -->
+
+<header class="logo-header">
+
+    <div class="header-left">
+
+        <div class="game-title">
+            EX:MAZE
+        </div>
+
+        <div class="game-subtitle">
+            SURVIVAL MAZE SYSTEM
+        </div>
+
+    </div>
+
+
+    <div class="header-right">
+
+        <div class="stage-box">
+
+            <span class="stage-label">
+                STAGE
+            </span>
+
+            <span id="stage-display">
+                01 / 13
+            </span>
+
+        </div>
+
+
+        <div class="timer-box">
+
+            <span class="timer-label">
+                TIME
+            </span>
+
+            <span id="timer-display">
+                --:--
+            </span>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+<!-- =======================================================
+     게임 영역
+======================================================= -->
+
+<div id="game-container">
+
+    <canvas
+        id="mazeCanvas"
+        tabindex="0">
+    </canvas>
+
+
+    <div id="mode-hud">
+        MODE : NORMAL
+    </div>
+
+
+    <div id="status-msg">
+    </div>
+
+
+    <div id="danger-hud">
+        ⚠ DANGER — PURSUER DETECTED
+    </div>
+
+
+    <div id="timer-bar-wrapper">
+
+        <div id="timer-bar"></div>
+
+    </div>
+
+
+    <!-- ===================================================
+         시작 화면
+    =================================================== -->
+
+    <div
+        id="start-modal"
+        class="overlay">
+
+        <div class="start-panel festival-start-panel">
+          <div id="festival-home" class="festival-home">
+            <div class="festival-topline">
+              <span class="festival-brand"><span class="brand-mark">EX</span> EX:MAZE</span>
+              <span class="system-pill"><i></i> SYSTEM ONLINE</span>
+            </div>
+            <div class="festival-hero-grid">
+              <section class="festival-hero-copy">
+                <div class="festival-eyebrow"><span></span> FESTIVAL ARCADE EXPERIENCE</div>
+                <div class="festival-title">EX<span>:</span>MAZE</div>
+                <div class="festival-title-line"></div>
+                <h1>FIND THE EXIT.<br><em>BEAT THE CLOCK.</em></h1>
+                <p class="festival-lead">13 STAGES. ONE ESCAPE.<br>미로를 탈출하고 당신의 기록을 남겨보세요.</p>
+                <div class="festival-stat-row">
+                  <div><b>13</b><small>STAGES</small></div>
+                  <div><b>∞</b><small>RETRIES</small></div>
+                  <div><b>01</b><small>MISSION</small></div>
+                </div>
+                <div class="festival-live-note"><span class="live-dot"></span> YOUR RUN WILL BE SAVED TO THIS COMPUTER</div>
+              </section>
+              <section class="festival-entry-card">
+                <div class="entry-card-top"><span>PLAYER REGISTRATION</span><span>01 / 02</span></div>
+                <div class="entry-icon">⌁</div>
+                <h2>READY TO ESCAPE?</h2>
+                <p>시작하기 전에 이름 또는 별명을 입력하세요.</p>
+                <div class="name-entry festival-name-entry">
+                  <label for="festival-player-name">PLAYER NAME · 참가자 이름</label>
+                  <input id="festival-player-name" type="text" maxlength="16" autocomplete="nickname" placeholder="이름 또는 별명을 입력하세요">
+                  <small>최대 16자 · 리더보드에 이 이름이 표시됩니다.</small>
+                </div>
+                <button class="start-btn festival-start-btn" onclick="applyAndStart()"><span>GAME START</span><b>↗</b></button>
+                <div class="entry-hint"><span>▶</span> START를 누르면 타이머가 시작됩니다.</div>
+                <div class="festival-secondary-actions">
+                  <button class="lobby-nav-btn" onclick="openLeaderboard()">🏆 LEADERBOARD</button>
+                  <button class="lobby-nav-btn" onclick="openStageSelect()">▦ STAGE SELECT</button>
+                  <button class="lobby-nav-btn" onclick="openRecords()">◷ RECORDS</button>
+                  <button class="lobby-nav-btn" onclick="openPlayConfig()">⚙ MODE SETTINGS</button>
+                </div>
+              </section>
+            </div>
+            <div class="festival-footer"><span>EX:MAZE // FESTIVAL EDITION</span><span>TOUCH · KEYBOARD · ALL DEVICES</span><span>ESCAPE SYSTEM v1.3</span></div>
+          </div>
+
+            <div id="lobby-config" style="display:none">
+            <div class="mode-section-title">MAIN MODE · 1개만 선택</div>
+
+            <div class="mode-grid">
+
+                <div class="mode-btn" id="m-fog" onclick="toggleMode('fog')">
+                    🌫️ 연한 안개 모드
+                </div>
+
+                <div class="mode-btn" id="m-chase" onclick="toggleMode('chase')">
+                    👺 추격전
+                </div>
+
+                <div class="mode-btn" id="m-chaos" onclick="toggleMode('chaos')">
+                    🌀 카오스
+                </div>
+
+                <div class="mode-btn" id="m-time" onclick="toggleMode('time')">
+                    ⏳ 타임어택
+                </div>
+
+                <div class="mode-btn" id="m-redlight" onclick="toggleMode('redlight')">
+                    🚦 무궁화
+                </div>
+
+                <div class="mode-btn" id="m-speedrun" onclick="toggleMode('speedrun')">
+                    ⚡ 스피드런
+                </div>
+
+            </div>
+
+            <div class="mode-note">
+                ※ 아무 모드도 선택하지 않으면 🕹️ 일반 모드로 플레이합니다.<br>
+                ※ 👺 추격전과 🚦 무궁화는 서로 동시에 선택할 수 없습니다.
+            </div>
+
+            <div class="mode-section-title">SUPPORT MODE · 여러 개 조합 가능</div>
+
+            <div class="mode-grid">
+
+                <div class="mode-btn" id="s-darkness" onclick="toggleSupport('darkness')">
+                    🌑 어둠
+                </div>
+
+                <div class="mode-btn" id="s-mirror" onclick="toggleSupport('mirror')">
+                    🔄 미러
+                </div>
+
+                <div class="mode-btn" id="s-onelife" onclick="toggleSupport('onelife')">
+                    💀 원 라이프
+                </div>
+
+                <div class="mode-btn" id="s-ghost" onclick="toggleSupport('ghost')">
+                    👻 고스트
+                </div>
+
+                <div class="mode-btn" id="s-random" onclick="toggleSupport('random')">
+                    🧩 랜덤 미로
+                </div>
+
+            </div>
+
+            <div class="lobby-route">
+                <div class="route-head"><span>EXTREME ROUTE</span><span>01 → 13</span></div>
+                <div class="route-dots">
+                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+                <div class="route-caption">초반은 빠르게 · STAGE 04/06/08/10/13 특수 기믹</div>
+            </div>
+
+            <button
+                class="start-btn"
+                onclick="applyAndStart()">
+
+                GAME START
+
+            </button>
+
+            <button class="lobby-back" onclick="showLobbyHome()">← BACK TO LOBBY</button>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         스테이지 선택
+    =================================================== -->
+    <div id="stage-select-modal" class="overlay" style="display:none">
+        <div class="start-panel">
+            <div class="lobby-logo-small">STAGE SELECT</div>
+            <div class="start-title">🗺 EXTREME ROUTE</div>
+            <div class="start-description" id="unlock-text">STAGE 01 UNLOCKED</div>
+            <div class="stage-select-grid" id="stage-select-grid"></div>
+            <button class="lobby-back" onclick="closeStageSelect()">← BACK TO LOBBY</button>
+        </div>
+    </div>
+
+    <!-- ===================================================
+         기록
+    =================================================== -->
+    <div id="records-modal" class="overlay" style="display:none">
+        <div class="start-panel">
+            <div class="lobby-logo-small">PLAYER RECORDS</div>
+            <div class="start-title">🏆 RECORDS</div>
+            <div class="start-description">각 스테이지의 개인 최고 기록입니다.</div>
+            <div class="records-list" id="records-list"></div>
+            <button class="lobby-back" onclick="closeRecords()">← BACK TO LOBBY</button>
+        </div>
+    </div>
+
+    <div id="leaderboard-modal" class="overlay" style="display:none">
+        <div class="start-panel">
+            <div class="lobby-logo-small">FESTIVAL RANKING</div>
+            <div class="start-title">🥇 LEADERBOARD</div>
+            <div class="start-description">가장 높은 스테이지까지 진행한 기록이 우선이며, 같은 스테이지라면 시간이 짧은 순입니다.</div>
+            <div class="start-description" id="leaderboard-status" role="status">이 컴퓨터에 저장된 축제 기록</div>
+            <div class="leaderboard-list" id="leaderboard-list"></div>
+            <div class="start-description">※ 기록은 이 컴퓨터의 브라우저에 저장됩니다. 브라우저 데이터를 삭제하면 기록도 사라질 수 있습니다.</div>
+            <button class="lobby-back" onclick="closeLeaderboard()">← BACK TO LOBBY</button>
+        </div>
+    </div>
+
+    <!-- ===================================================
+         스테이지 시작 연출
+    =================================================== -->
+
+    <div
+        id="stage-intro"
+        class="overlay">
+
+        <div class="intro-small">
+            EX:MAZE
+        </div>
+
+        <div class="intro-line"></div>
+
+        <div
+            class="intro-stage"
+            id="intro-stage-number">
+
+            STAGE 01
+
+        </div>
+
+        <div
+            class="intro-name"
+            id="intro-stage-name">
+
+            THE BEGINNING
+
+        </div>
+
+        <div class="intro-line"></div>
+
+    </div>
+
+
+    <!-- ===================================================
+         클리어 화면
+    =================================================== -->
+
+    <div
+        id="clear-modal"
+        class="overlay">
+
+        <div class="clear-panel">
+
+            <div class="clear-title">
+                STAGE CLEAR
+            </div>
+
+            <div
+                class="clear-stage"
+                id="clear-stage">
+
+                STAGE 01 COMPLETE
+
+            </div>
+
+            <div class="clear-message">
+                다음 스테이지를 준비하세요...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     조작
+======================================================= -->
+
+<div id="controls-wrapper">
+
+    <div class="controls-label">
+        TOUCH CONTROL · 화면을 원하는 방향으로 스와이프한 뒤 손가락을 떼지 않으면 계속 이동
+    </div>
+
+
+    <div id="controls">
+
+        <div
+            class="btn"
+            style="grid-area: up;"
+            onpointerdown="activeMoves.up=true"
+            onpointerup="activeMoves.up=false"
+            onpointercancel="activeMoves.up=false">
+
+            ↑
+
+        </div>
+
+
+        <div
+            class="btn"
+            style="grid-area: left;"
+            onpointerdown="activeMoves.left=true"
+            onpointerup="activeMoves.left=false"
+            onpointercancel="activeMoves.left=false">
+
+            ←
+
+        </div>
+
+
+        <div class="center-btn">
+        </div>
+
+
+        <div
+            class="btn"
+            style="grid-area: right;"
+            onpointerdown="activeMoves.right=true"
+            onpointerup="activeMoves.right=false"
+            onpointercancel="activeMoves.right=false">
+
+            →
+
+        </div>
+
+
+        <div
+            class="btn"
+            style="grid-area: down;"
+            onpointerdown="activeMoves.down=true"
+            onpointerup="activeMoves.down=false"
+            onpointercancel="activeMoves.down=false">
+
+            ↓
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   기본 변수
+========================================================= */
+
+const savedFestivalName=localStorage.getItem('exmaze-festival-last-name')||'';
+const festivalNameInput=document.getElementById('festival-player-name');
+if(festivalNameInput) festivalNameInput.value=savedFestivalName;
+
+const canvas =
+    document.getElementById('mazeCanvas');
+
+const ctx =
+    canvas.getContext('2d');
+
+
+// 스테이지는 13개를 유지하되, 후반에도 너무 오래 걸리지 않도록 완만하게 증가
+const stages = [
+    {s:15}, {s:17}, {s:19},
+    {s:21}, {s:21}, {s:23},
+    {s:23}, {s:25}, {s:25},
+    {s:27}, {s:27}, {s:29},
+    {s:31}
+];
+
+
+let curIdx = 0;
+
+let maze;
+
+let gSize;
+
+let cSize;
+
+let player;
+
+let isStarted = false;
+
+let gameTime = 30;
+let runTime = 0;
+let runStart = 0;
+let festivalPlayerName = '';
+let festivalRunStarted = false;
+const FESTIVAL_LEADERBOARD_KEY = 'exmaze-festival-leaderboard-v1'; // 이전 브라우저 기록 호환용
+// GitHub Pages static edition: records are saved in this browser only.
+let leaderboardRequestBusy = false;
+
+let selectedModes = new Set();
+let selectedSupports = new Set();
+const mainModes = ['fog','chase','chaos','time','redlight','speedrun'];
+const supportNames = { darkness:'🌑 DARKNESS', mirror:'🔄 MIRROR', onelife:'💀 ONE LIFE', ghost:'👻 GHOST', random:'🧩 RANDOM MAZE' };
+let bestTime = null;
+let ghost = {x:1,y:1};
+let oneLifeUsed = false;
+let stageStartTime = 0;
+let ghostPath = [];
+let ghostStep = 0;
+let ghostLastMove = 0;
+let themeColor = '#00aaff';
+
+let items = [];
+
+let afterimages = [];
+
+let playerPath = [];
+
+let activeMoves = {
+    up:false,
+    down:false,
+    left:false,
+    right:false
+};
+
+let isRedLight = false;
+
+let chaser = {
+    x:1,
+    y:1
+};
+
+let chaosTick = 8;
+
+
+/* =========================================================
+   BGM
+========================================================= */
+
+const bgmList = [
+
+    new Audio('bgm1.mp3'),
+
+    new Audio('bgm2.mp3'),
+
+    new Audio('bgm3.mp3')
+
+];
+
+
+const effectSound =
+    new Audio('effect.mp3');
+
+
+bgmList.forEach(track => {
+
+    track.loop = true;
+
+});
+
+
+let currentBgm = null;
+
+
+/* =========================================================
+   스테이지 이름
+========================================================= */
+
+const stageNames = [
+
+    "THE BEGINNING",
+
+    "FIRST TRIAL",
+
+    "THE MAZE",
+
+    "DEEP ROUTE",
+
+    "DARK PATH",
+
+    "LOST AREA",
+
+    "THE LABYRINTH",
+
+    "CHAOS ZONE",
+
+    "DANGER ZONE",
+
+    "NIGHTMARE",
+
+    "EXTREME",
+
+    "FINAL TRIAL",
+
+    "EX:MAZE"
+
+];
+
+
+/* =========================================================
+   모드 이름
+========================================================= */
+
+const modeNames = {
+
+    fog: "🌫️ FOG MODE",
+
+    chase: "👺 CHASE MODE",
+
+    chaos: "🌀 CHAOS MODE",
+
+    time: "⏳ TIME ATTACK",
+
+    redlight: "🚦 RED LIGHT"
+
+};
+
+
+/* =========================================================
+   BGM 변경
+========================================================= */
+
+function updateStageBgm() {
+
+    if(currentBgm) {
+
+        currentBgm.pause();
+
+        currentBgm.currentTime = 0;
+
+    }
+
+
+    const bgmIndex =
+        curIdx % bgmList.length;
+
+
+    currentBgm =
+        bgmList[bgmIndex];
+
+
+    if(currentBgm) {
+
+        currentBgm.play().catch(
+            e => console.log(
+                "BGM 재생 대기:",
+                e
+            )
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   스테이지별 특수 기믹
+========================================================= */
+const stageSpecials = {
+    3: ['darkness'],   // STAGE 04
+    5: ['mirror'],     // STAGE 06
+    7: ['chase'],      // STAGE 08
+    9: ['chaos'],      // STAGE 10
+    12:['darkness','chase','chaos'] // STAGE 13 FINAL
+};
+const stageSpecialNames = {darkness:'🌑 DARK STAGE',mirror:'🔄 MIRROR STAGE',chase:'👺 CHASE STAGE',chaos:'🌀 CHAOS STAGE'};
+function specialActive(type){ return (stageSpecials[curIdx]||[]).includes(type); }
+
+/* =========================================================
+   모드 토글
+========================================================= */
+
+function toggleMode(mode) {
+
+    const btn = document.getElementById('m-' + mode);
+
+    // 메인 모드는 정확히 1개만 선택
+    if (selectedModes.has(mode)) {
+        selectedModes.delete(mode);
+        btn.classList.remove('active');
+
+        // 메인 모드를 모두 해제하면 보조 모드도 자동 해제
+        // (모드 없이 플레이하는 NORMAL 모드에서는 SUPPORT가 작동하지 않음)
+        if (selectedModes.size === 0) {
+            selectedSupports.clear();
+            document.querySelectorAll('[id^=\"s-\"]').forEach(supportBtn => {
+                supportBtn.classList.remove('active');
+            });
+        }
+    } else {
+        selectedModes.forEach(oldMode => {
+            const oldBtn = document.getElementById('m-' + oldMode);
+            if (oldBtn) oldBtn.classList.remove('active');
+        });
+        selectedModes.clear();
+        selectedModes.add(mode);
+        btn.classList.add('active');
+    }
+
+    updateModeButtons();
+    updateModeHud();
+}
+
+function toggleSupport(mode) {
+
+    const btn = document.getElementById('s-' + mode);
+
+    if (selectedSupports.has(mode)) {
+        selectedSupports.delete(mode);
+        btn.classList.remove('active');
+    } else {
+        selectedSupports.add(mode);
+        btn.classList.add('active');
+    }
+
+    updateModeHud();
+}
+
+function updateModeButtons() {
+    const chase = document.getElementById('m-chase');
+    const red = document.getElementById('m-redlight');
+
+    // 핵심 제한: 추격전과 무궁화는 서로 잠금
+    if (selectedModes.has('chase')) {
+        red.classList.add('disabled');
+    } else if (selectedModes.has('redlight')) {
+        chase.classList.add('disabled');
+    } else {
+        chase.classList.remove('disabled');
+        red.classList.remove('disabled');
+    }
+
+    document.querySelectorAll('[id^="s-"]').forEach(btn => {
+        if (selectedModes.size === 0) btn.classList.add('support-disabled');
+        else btn.classList.remove('support-disabled');
+    });
+}
+
+function showStatus(message, color = '#f1c40f') {
+    const status = document.getElementById('status-msg');
+    status.innerText = message;
+    status.style.color = color;
+    status.style.opacity = '1';
+    clearTimeout(showStatus.timer);
+    showStatus.timer = setTimeout(() => status.style.opacity = '0', 1000);
+}
+
+
+/* =========================================================
+   선택 모드 HUD
+========================================================= */
+
+function updateModeHud() {
+    const hud = document.getElementById('mode-hud');
+
+    const main = selectedModes.size
+        ? modeNames[[...selectedModes][0]]
+        : '🕹️ 일반 모드';
+
+    const supports = selectedSupports.size
+        ? [...selectedSupports].map(m => supportNames[m]).join(' + ')
+        : '';
+
+    hud.innerText = supports
+        ? `MAIN : ${main}  •  SUPPORT : ${supports}`
+        : `MAIN : ${main}`;
+}
+
+
+/* =========================================================
+   로비 메뉴 / 스테이지 해금 / 기록
+========================================================= */
+function getUnlockedStage(){
+    return Math.max(1, Math.min(stages.length, Number(localStorage.getItem('inchang-unlocked-stage') || 1)));
+}
+
+function openPlayConfig(){
+    document.getElementById('festival-home').style.display='none';
+    document.getElementById('lobby-config').style.display='block';
+}
+
+function showLobbyHome(){
+    document.getElementById('lobby-config').style.display='none';
+    document.getElementById('festival-home').style.display='block';
+}
+
+function openStageSelect(){
+    const modal=document.getElementById('stage-select-modal');
+    const grid=document.getElementById('stage-select-grid');
+    const unlocked=getUnlockedStage();
+    document.getElementById('unlock-text').innerText=`STAGE 01 ~ ${String(unlocked).padStart(2,'0')} UNLOCKED`;
+    grid.innerHTML='';
+    stages.forEach((_,i)=>{
+        const n=i+1, btn=document.createElement('button');
+        const done=!!localStorage.getItem(`inchang-best-stage-${i}`);
+        btn.className='stage-card'+(n>unlocked?' locked':'')+(done?' cleared':'');
+        const special=(stageSpecials[i]||[]).map(x=>stageSpecialNames[x]).join(' + '); btn.innerHTML=`<span>${n>unlocked?'🔒':'STAGE '+String(n).padStart(2,'0')}</span><small>${n>unlocked?'LOCKED':(special|| (done?'CLEAR RECORD':'NORMAL'))}</small>`;
+        if(n<=unlocked) btn.onclick=()=>startSelectedStage(i);
+        grid.appendChild(btn);
+    });
+    document.getElementById('start-modal').style.display='none';
+    modal.style.display='flex';
+}
+
+function closeStageSelect(){
+    document.getElementById('stage-select-modal').style.display='none';
+    document.getElementById('start-modal').style.display='flex';
+    showLobbyHome();
+}
+
+function startSelectedStage(index){
+    if(!prepareFestivalRun()) return;
+    curIdx=index;
+    document.getElementById('stage-select-modal').style.display='none';
+    document.getElementById('start-modal').style.display='none';
+    updateModeHud(); canvas.focus(); updateStageBgm(); init(); showStageIntro();
+    requestAnimationFrame(renderLoop);
+    setInterval(processInput,60);
+    startModeIntervals();
+}
+
+function openRecords(){
+    const list=document.getElementById('records-list'); list.innerHTML='';
+    for(let i=0;i<stages.length;i++){
+        const row=document.createElement('div'); row.className='record-row';
+        const raw=localStorage.getItem(`inchang-best-stage-${i}`);
+        const time=raw?Number(raw):null;
+        const rank=time?rankForTime(time,i):'-';
+        row.innerHTML=`<div>${String(i+1).padStart(2,'0')}</div><div><b>STAGE ${String(i+1).padStart(2,'0')}</b><small>${time?'PERSONAL BEST':'NOT CLEARED'}</small></div><div class="record-time ${time?'rank-'+rank.toLowerCase():''}">${time?time.toFixed(2)+'s · '+rank:'--'}</div>`;
+        list.appendChild(row);
+    }
+    document.getElementById('start-modal').style.display='none';
+    document.getElementById('records-modal').style.display='flex';
+}
+
+function closeRecords(){
+    document.getElementById('records-modal').style.display='none';
+    document.getElementById('start-modal').style.display='flex';
+    showLobbyHome();
+}
+
+function getFestivalLeaderboard(){
+    try{const data=JSON.parse(localStorage.getItem(FESTIVAL_LEADERBOARD_KEY)||'[]');return Array.isArray(data)?data:[];}
+    catch(_){return [];}
+}
+function saveFestivalProgress(stageIndex,elapsedSeconds,completedAll=false){
+    if(!festivalPlayerName||!festivalRunStarted)return;
+    const payload={
+        name:String(festivalPlayerName).trim().replace(/\s+/g,' ').slice(0,16),
+        stage:Math.max(1,Math.min(13,Number(stageIndex)+1)),
+        time:Number(Math.max(0.01,Number(elapsedSeconds)||0).toFixed(2)),
+        completedAll:!!completedAll
+    };
+    const board=getFestivalLeaderboard();
+    const old=board.find(row=>String(row.name||'').toLocaleLowerCase()===payload.name.toLocaleLowerCase());
+    const entry={...payload,updatedAt:Date.now()};
+    if(!old)board.push(entry);
+    else if(entry.stage>Number(old.stage||0)||(entry.stage===Number(old.stage||0)&&entry.time<Number(old.time||Infinity))||(entry.completedAll&&!old.completedAll))Object.assign(old,entry);
+    board.sort((a,b)=>(Number(b.stage||0)-Number(a.stage||0))||(Number(a.time||Infinity)-Number(b.time||Infinity)));
+    try{localStorage.setItem(FESTIVAL_LEADERBOARD_KEY,JSON.stringify(board.slice(0,100)));}catch(_){ }
+    setLeaderboardStatus('● LOCAL RECORDS · 이 컴퓨터에 저장됨','#7dffb2');
+}
+function setLeaderboardStatus(message,color){
+    const el=document.getElementById('leaderboard-status');
+    if(el){el.textContent=message;if(color)el.style.color=color;}
+}
+function openLeaderboard(){
+    const list=document.getElementById('leaderboard-list');
+    const board=getFestivalLeaderboard().sort((a,b)=>(Number(b.stage||0)-Number(a.stage||0))||(Number(a.time||Infinity)-Number(b.time||Infinity)));
+    list.innerHTML='';
+    document.getElementById('start-modal').style.display='none';
+    document.getElementById('clear-modal').style.display='none';
+    document.getElementById('leaderboard-modal').style.display='flex';
+    setLeaderboardStatus('● LOCAL RECORDS · 이 컴퓨터에 저장된 기록','#7dffb2');
+    if(!board.length){list.innerHTML='<div class="leader-empty">아직 등록된 기록이 없습니다.<br>미로를 플레이하고 첫 기록을 남겨보세요!</div>';return;}
+    board.slice(0,50).forEach((entry,index)=>{
+        const row=document.createElement('div');row.className='leader-row';
+        const rank=document.createElement('div');rank.className='leader-rank';rank.textContent=String(index+1).padStart(2,'0');
+        const player=document.createElement('div');const name=document.createElement('div');name.className='leader-name';name.textContent=entry.name||'PLAYER';
+        const meta=document.createElement('small');meta.className='leader-meta';meta.textContent=entry.completed_all||entry.completedAll?'13 STAGES · ALL CLEAR':`STAGE ${String(entry.stage||1).padStart(2,'0')} REACHED`;player.append(name,meta);
+        const score=document.createElement('div');score.className='leader-score';score.textContent=Number(entry.time||0).toFixed(2)+'s';row.append(rank,player,score);list.appendChild(row);
+    });
+}
+function closeLeaderboard(){document.getElementById('leaderboard-modal').style.display='none';document.getElementById('start-modal').style.display='flex';showLobbyHome();}
+
+function rankForTime(time,idx){
+    const target=25+idx*2.2;
+    if(time<=target*.72)return 'SSS';
+    if(time<=target*.86)return 'SS';
+    if(time<=target)return 'S';
+    if(time<=target*1.25)return 'A';
+    if(time<=target*1.65)return 'B';
+    return 'C';
+}
+
+function startModeIntervals(){
+    if(selectedModes.has('redlight')) setInterval(toggleRedLight,3000);
+    if(selectedModes.has('time')) setInterval(()=>{if(isStarted)gameTime-=0.1},100);
+    if(selectedModes.has('chase') || specialActive('chase')) setInterval(updateChaser,200);
+    if(selectedModes.has('chaos') || specialActive('chaos')) setInterval(()=>{if(isStarted){chaosTick--;if(chaosTick<=0){teleport();chaosTick=8}}},1000);
+    setInterval(()=>{if(isStarted&&selectedSupports.has('ghost'))updateGhost()},90);
+}
+
+/* =========================================================
+   게임 시작
+========================================================= */
+
+function prepareFestivalRun(){
+    const input=document.getElementById('festival-player-name');
+    const name=(input?.value||'').trim().replace(/\s+/g,' ').slice(0,16);
+    if(!name){
+        if(input){ input.focus(); input.setCustomValidity('플레이할 이름을 먼저 입력해 주세요.'); input.reportValidity(); input.addEventListener('input',()=>input.setCustomValidity(''),{once:true}); }
+        return false;
+    }
+    festivalPlayerName=name;
+    localStorage.setItem('exmaze-festival-last-name',name);
+    festivalRunStarted=true;
+    runStart=performance.now();
+    runTime=0;
+    return true;
+}
+
+function applyAndStart() {
+    if (!prepareFestivalRun()) return;
+    if (selectedModes.size === 0) selectedSupports.clear();
+    curIdx = 0;
+    document.getElementById('start-modal').style.display='none';
+    updateModeHud(); canvas.focus(); updateStageBgm(); init(); showStageIntro();
+    requestAnimationFrame(renderLoop);
+    setInterval(processInput,60);
+    startModeIntervals();
+}
+
+function showStageIntro() {
+
+    const overlay =
+        document.getElementById(
+            'stage-intro'
+        );
+
+
+    document.getElementById(
+        'intro-stage-number'
+    ).innerText =
+        `STAGE ${String(curIdx + 1).padStart(2,'0')}`;
+
+
+    document.getElementById(
+        'intro-stage-name'
+    ).innerText =
+        stageNames[curIdx];
+
+
+    overlay.style.display =
+        'flex';
+
+
+    setTimeout(() => {
+
+        overlay.style.display =
+            'none';
+
+        // 스피드런 기록은 스테이지 연출이 끝난 뒤부터 측정
+        if(!festivalRunStarted) runStart = performance.now();
+        stageStartTime = performance.now();
+        ghostStep = 0;
+
+    }, 1300);
+
+}
+
+
+/* =========================================================
+   미로 초기화
+========================================================= */
+
+function init() {
+
+    const stage =
+        stages[curIdx];
+
+
+    gSize =
+        stage.s;
+
+
+    document.getElementById(
+        'stage-display'
+    ).innerText =
+        `${String(curIdx + 1).padStart(2,'0')} / ${stages.length}`;
+
+
+    const container =
+        document.getElementById(
+            'game-container'
+        );
+
+
+    const size =
+        Math.min(
+            container.clientWidth - 20,
+            container.clientHeight - 20
+        );
+
+
+    canvas.width =
+        size;
+
+    canvas.height =
+        size;
+
+
+    cSize =
+        size / gSize;
+
+
+    maze =
+        makeMaze(gSize);
+
+
+    player = {
+        x:1,
+        y:1
+    };
+
+
+    playerPath = [
+        {
+            x:1,
+            y:1
+        }
+    ];
+
+
+    items =
+        selectedModes.has('time')
+        ?
+        Array.from(
+            {length:6},
+            () => findEmpty()
+        )
+        :
+        [];
+
+
+    gameTime =
+        Math.min(45, 28 + (curIdx * 1.5));
+
+
+    chaosTick = 8;
+
+
+    isRedLight = false;
+    oneLifeUsed = false;
+    ghost = findEmpty();
+    ghostPath = JSON.parse(localStorage.getItem(`inchang-ghost-stage-${curIdx}`) || '[]');
+    ghostStep = 0;
+    ghostLastMove = 0;
+    applyStageTheme();
+
+
+    document.getElementById(
+        'red-light-ui'
+    ).style.display =
+        'none';
+
+
+    document.getElementById(
+        'danger-hud'
+    ).style.display =
+        (selectedModes.has('chase') || specialActive('chase'))
+        ? 'block'
+        : 'none';
+
+}
+
+
+/* =========================================================
+   스테이지 테마
+========================================================= */
+function applyStageTheme() {
+    if (curIdx <= 2) themeColor = '#00aaff';
+    else if (curIdx <= 5) themeColor = '#39d353';
+    else if (curIdx <= 8) themeColor = '#ff3030';
+    else if (curIdx <= 11) themeColor = '#b85cff';
+    else themeColor = '#f1c40f';
+
+    document.documentElement.style.setProperty('--blue', themeColor);
+}
+
+/* =========================================================
+   빈 공간 찾기
+========================================================= */
+
+function findEmpty() {
+
+    let rx, ry;
+
+
+    do {
+
+        rx =
+            Math.floor(
+                Math.random() * gSize
+            );
+
+        ry =
+            Math.floor(
+                Math.random() * gSize
+            );
+
+    }
+
+    while(
+        maze[ry][rx] !== 0
+    );
+
+
+    return {
+        x:rx,
+        y:ry
+    };
+
+}
+
+
+/* =========================================================
+   카오스 순간이동
+========================================================= */
+
+function teleport() {
+
+    player =
+        findEmpty();
+
+
+    playerPath = [
+        player
+    ];
+
+
+    canvas.style.transform =
+        "scale(1.04)";
+
+
+    setTimeout(() => {
+
+        canvas.style.transform =
+            "scale(1)";
+
+    }, 150);
+
+}
+
+
+/* =========================================================
+   미로 생성
+========================================================= */
+
+function makeMaze(size) {
+
+    let m =
+        Array.from(
+            {length:size},
+            () => Array(size).fill(1)
+        );
+
+
+    function walk(x,y) {
+
+        m[y][x] = 0;
+
+
+        let d = [
+            [0,1],
+            [0,-1],
+            [1,0],
+            [-1,0]
+        ].sort(
+            () => Math.random() - 0.5
+        );
+
+
+        for(
+            let [dx,dy] of d
+        ) {
+
+            let nx =
+                x + dx * 2;
+
+            let ny =
+                y + dy * 2;
+
+
+            if(
+                nx > 0 &&
+                nx < size - 1 &&
+                ny > 0 &&
+                ny < size - 1 &&
+                m[ny][nx] === 1
+            ) {
+
+                m[y + dy][x + dx] = 0;
+
+                walk(nx,ny);
+
+            }
+
+        }
+
+    }
+
+
+    walk(1,1);
+
+
+    m[size - 2][size - 2] = 0;
+
+    // RANDOM MAZE: 기존 미로에 추가 통로를 일부 열어 매번 다른 구조 생성
+    if (selectedSupports.has('random')) {
+        const openings = Math.floor(size * 1.5);
+        for (let i = 0; i < openings; i++) {
+            const x = 1 + 2 * Math.floor(Math.random() * ((size - 2) / 2));
+            const y = 1 + 2 * Math.floor(Math.random() * ((size - 2) / 2));
+            const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+            const [dx,dy] = dirs[Math.floor(Math.random()*dirs.length)];
+            const wx = x + dx, wy = y + dy;
+            if (wx > 0 && wy > 0 && wx < size-1 && wy < size-1) m[wy][wx] = 0;
+        }
+    }
+
+    return m;
+
+}
+
+
+/* =========================================================
+   무궁화
+========================================================= */
+
+function toggleRedLight() {
+
+    isRedLight =
+        !isRedLight;
+
+
+    const border =
+        document.getElementById(
+            'red-light-ui'
+        );
+
+
+    const status =
+        document.getElementById(
+            'status-msg'
+        );
+
+
+    border.style.display =
+        isRedLight
+        ? 'block'
+        : 'none';
+
+
+    if(isRedLight) {
+
+        status.innerText =
+            "🔴 RED LIGHT — STOP";
+
+        status.style.color =
+            "#ff4040";
+
+        status.style.opacity =
+            "1";
+
+    }
+
+    else {
+
+        status.innerText =
+            "🟢 GREEN LIGHT — RUN";
+
+        status.style.color =
+            "#4dff88";
+
+        status.style.opacity =
+            "1";
+
+
+        setTimeout(() => {
+
+            status.style.opacity =
+                "0";
+
+        }, 800);
+
+    }
+
+}
+
+
+/* =========================================================
+   추격자
+========================================================= */
+
+function updateChaser() {
+
+    if(
+        !isStarted ||
+        !(selectedModes.has('chase') || specialActive('chase'))
+    ) return;
+
+
+    if(
+        playerPath.length > 8
+    ) {
+
+        let next =
+            playerPath.shift();
+
+
+        chaser.x =
+            next.x;
+
+        chaser.y =
+            next.y;
+
+    }
+
+
+    if(
+        chaser.x === player.x &&
+        chaser.y === player.y
+    ) {
+
+        showGameOver(
+            "👺 PURSUER CAUGHT YOU"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   고스트 SUPPORT
+========================================================= */
+function updateGhost() {
+    if (!isStarted || !selectedSupports.has('ghost')) return;
+    if (ghostPath.length) {
+        if (ghostStep < ghostPath.length && performance.now()-ghostLastMove >= 90) {
+            const pt=ghostPath[ghostStep++];
+            ghost.x=pt.x; ghost.y=pt.y; ghostLastMove=performance.now();
+        }
+    } else {
+        const options=[[1,0],[-1,0],[0,1],[0,-1]].sort(()=>Math.random()-.5);
+        for(const [dx,dy] of options){const nx=ghost.x+dx,ny=ghost.y+dy;if(nx>=0&&nx<gSize&&ny>=0&&ny<gSize&&maze[ny][nx]===0){ghost.x=nx;ghost.y=ny;break;}}
+    }
+    if(ghost.x===player.x&&ghost.y===player.y) showGameOver('👻 GHOST CAUGHT YOU');
+}
+
+/* =========================================================
+   입력 처리
+========================================================= */
+
+function processInput() {
+
+    if(activeMoves.up)
+        move('up');
+
+    else if(activeMoves.down)
+        move('down');
+
+    else if(activeMoves.left)
+        move('left');
+
+    else if(activeMoves.right)
+        move('right');
+
+}
+
+
+/* =========================================================
+   이동
+========================================================= */
+
+function move(dir) {
+
+    if(!isStarted)
+        isStarted = true;
+
+    // MIRROR SUPPORT
+    if (selectedSupports.has('mirror') || specialActive('mirror')) {
+        if (dir === 'up') dir = 'down';
+        else if (dir === 'down') dir = 'up';
+        else if (dir === 'left') dir = 'right';
+        else if (dir === 'right') dir = 'left';
+    }
+
+    if(
+        selectedModes.has('redlight') &&
+        isRedLight
+    ) {
+
+        player.x = 1;
+
+        player.y = 1;
+
+        return;
+
+    }
+
+
+    let dx = 0;
+
+    let dy = 0;
+
+
+    if(dir === 'up')
+        dy = -1;
+
+    if(dir === 'down')
+        dy = 1;
+
+    if(dir === 'left')
+        dx = -1;
+
+    if(dir === 'right')
+        dx = 1;
+
+
+    let nx =
+        player.x + dx;
+
+    let ny =
+        player.y + dy;
+
+
+    if(
+        nx >= 0 &&
+        nx < gSize &&
+        ny >= 0 &&
+        ny < gSize &&
+        maze[ny][nx] === 0
+    ) {
+
+        afterimages.push({
+
+            x:player.x,
+
+            y:player.y,
+
+            a:0.5
+
+        });
+
+
+        player.x =
+            nx;
+
+        player.y =
+            ny;
+
+
+        playerPath.push({
+
+            x:nx,
+
+            y:ny
+
+        });
+
+
+        items =
+            items.filter(
+                it =>
+                    it.x !== player.x ||
+                    it.y !== player.y
+            );
+
+    }
+
+
+    if(
+        player.x === gSize - 2 &&
+        player.y === gSize - 2
+    ) {
+
+        checkClear();
+
+    }
+
+}
+
+
+/* =========================================================
+   게임 오버
+========================================================= */
+
+function showGameOver(message) {
+
+    isStarted = false;
+
+
+    const status =
+        document.getElementById(
+            'status-msg'
+        );
+
+
+    status.innerText =
+        message;
+
+
+    status.style.color =
+        "#ff4040";
+
+
+    status.style.opacity =
+        "1";
+
+
+    setTimeout(() => {
+
+        location.reload();
+
+    }, 1400);
+
+}
+
+
+/* =========================================================
+   렌더링
+========================================================= */
+
+function renderLoop() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    /* 타이머 */
+
+    if(
+        selectedModes.has('time')
+    ) {
+
+        document.getElementById(
+            'timer-display'
+        ).innerText =
+            gameTime.toFixed(2);
+
+
+        const maxTime =
+            Math.min(45, 28 + (curIdx * 1.5));
+
+
+        const percent =
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    (gameTime / maxTime) * 100
+                )
+            );
+
+
+        document.getElementById(
+            'timer-bar'
+        ).style.width =
+            percent + "%";
+
+
+        if(
+            gameTime <= 10 &&
+            gameTime > 0
+        ) {
+
+            document.getElementById(
+                'timer-display'
+            ).style.color =
+                "#ff4040";
+
+        }
+
+        else {
+
+            document.getElementById(
+                'timer-display'
+            ).style.color =
+                "white";
+
+        }
+
+
+        if(gameTime <= 0) {
+
+            showGameOver(
+                "⏰ TIME OVER"
+            );
+
+            return;
+
+        }
+
+    }
+
+    else {
+        if(festivalRunStarted && runStart>0){
+            const elapsed=Math.max(0,(performance.now()-runStart)/1000);
+            runTime=elapsed;
+            const minutes=Math.floor(elapsed/60);
+            const seconds=(elapsed%60).toFixed(2).padStart(5,'0');
+            document.getElementById('timer-display').innerText=`${String(minutes).padStart(2,'0')}:${seconds}`;
+        }else document.getElementById('timer-display').innerText='00:00.00';
+        document.getElementById('timer-bar').style.width='100%';
+    }
+
+
+    /* 미로 */
+
+    for(
+        let y = 0;
+        y < gSize;
+        y++
+    ) {
+
+        for(
+            let x = 0;
+            x < gSize;
+            x++
+        ) {
+
+            if(
+                maze[y][x] === 1
+            ) {
+
+                ctx.fillStyle =
+                    themeColor === "#00aaff" ? "#172b3b" : themeColor;
+
+            }
+
+            else {
+
+                ctx.fillStyle =
+                    "#f4f8fb";
+
+            }
+
+
+            /* 출구 */
+
+            if(
+                x === gSize - 2 &&
+                y === gSize - 2
+            ) {
+
+                ctx.fillStyle =
+                    "#ff3030";
+
+            }
+
+
+            ctx.fillRect(
+                x * cSize,
+                y * cSize,
+                cSize + 0.3,
+                cSize + 0.3
+            );
+
+        }
+
+    }
+
+
+    /* 벽 네온 */
+
+    ctx.strokeStyle =
+        themeColor + "33";
+
+    ctx.lineWidth = 1;
+
+
+    for(
+        let y = 0;
+        y < gSize;
+        y++
+    ) {
+
+        for(
+            let x = 0;
+            x < gSize;
+            x++
+        ) {
+
+            if(
+                maze[y][x] === 1
+            ) {
+
+                ctx.strokeRect(
+                    x * cSize,
+                    y * cSize,
+                    cSize,
+                    cSize
+                );
+
+            }
+
+        }
+
+    }
+
+
+    /* 출구 빛 */
+
+    const exitX =
+        (gSize - 2) * cSize +
+        cSize / 2;
+
+    const exitY =
+        (gSize - 2) * cSize +
+        cSize / 2;
+
+
+    const exitGlow =
+        ctx.createRadialGradient(
+            exitX,
+            exitY,
+            0,
+            exitX,
+            exitY,
+            cSize * 2.5
+        );
+
+
+    exitGlow.addColorStop(
+        0,
+        "rgba(255,50,50,0.55)"
+    );
+
+    exitGlow.addColorStop(
+        1,
+        "rgba(255,50,50,0)"
+    );
+
+
+    ctx.fillStyle =
+        exitGlow;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        exitX,
+        exitY,
+        cSize * 2.5,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    /* 잔상 */
+
+    afterimages =
+        afterimages.filter(
+            img => img.a > 0.05
+        );
+
+
+    afterimages.forEach(img => {
+
+        ctx.fillStyle =
+            `rgba(0,170,255,${img.a})`;
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            img.x * cSize + cSize / 2,
+            img.y * cSize + cSize / 2,
+            cSize / 3,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fill();
+
+
+        img.a -= 0.08;
+
+    });
+
+
+    /* 아이템 */
+
+    items.forEach(it => {
+
+        const ix =
+            it.x * cSize +
+            cSize / 2;
+
+        const iy =
+            it.y * cSize +
+            cSize / 2;
+
+
+        const glow =
+            ctx.createRadialGradient(
+                ix,
+                iy,
+                0,
+                ix,
+                iy,
+                cSize
+            );
+
+
+        glow.addColorStop(
+            0,
+            "rgba(255,220,50,0.9)"
+        );
+
+        glow.addColorStop(
+            1,
+            "rgba(255,220,50,0)"
+        );
+
+
+        ctx.fillStyle =
+            glow;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            ix,
+            iy,
+            cSize,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        ctx.fillStyle =
+            "#f1c40f";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            ix,
+            iy,
+            cSize / 3,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    });
+
+
+    /* 추격자 */
+
+    if(
+        selectedModes.has('chase')
+    ) {
+
+        const cx =
+            chaser.x * cSize;
+
+        const cy =
+            chaser.y * cSize;
+
+
+        ctx.shadowColor =
+            "#ff2020";
+
+        ctx.shadowBlur =
+            15;
+
+
+        ctx.fillStyle =
+            "#ff2020";
+
+
+        ctx.fillRect(
+            cx,
+            cy,
+            cSize,
+            cSize
+        );
+
+
+        ctx.shadowBlur = 0;
+
+    }
+
+
+    /* 고스트 */
+    if (selectedSupports.has('ghost')) {
+        const gx = ghost.x * cSize + cSize / 2;
+        const gy = ghost.y * cSize + cSize / 2;
+        ctx.fillStyle = 'rgba(190,220,255,0.75)';
+        ctx.shadowColor = '#9bdcff';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.arc(gx, gy, cSize / 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    /* 플레이어 */
+
+    const px =
+        player.x * cSize +
+        cSize / 2;
+
+    const py =
+        player.y * cSize +
+        cSize / 2;
+
+
+    const playerGlow =
+        ctx.createRadialGradient(
+            px,
+            py,
+            0,
+            px,
+            py,
+            cSize * 1.8
+        );
+
+
+    playerGlow.addColorStop(
+        0,
+        "rgba(0,170,255,0.8)"
+    );
+
+    playerGlow.addColorStop(
+        1,
+        "rgba(0,100,255,0)"
+    );
+
+
+    ctx.fillStyle =
+        playerGlow;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        px,
+        py,
+        cSize * 1.8,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.shadowColor =
+        "#008cff";
+
+    ctx.shadowBlur =
+        15;
+
+
+    ctx.fillStyle =
+        "#0077ff";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        px,
+        py,
+        cSize / 2.2,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.shadowBlur = 0;
+
+
+    /* DARKNESS SUPPORT */
+    if (selectedSupports.has('darkness') || specialActive('darkness')) {
+        const pX = player.x * cSize + cSize / 2;
+        const pY = player.y * cSize + cSize / 2;
+        ctx.fillStyle = 'rgba(0,0,0,0.86)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.globalCompositeOperation = 'destination-out';
+        const grad = ctx.createRadialGradient(pX,pY,0,pX,pY,cSize*3.2);
+        grad.addColorStop(0,'rgba(0,0,0,1)');
+        grad.addColorStop(0.75,'rgba(0,0,0,0.7)');
+        grad.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(pX,pY,cSize*3.2,0,Math.PI*2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    /* 안개 */
+
+    if(
+        selectedModes.has('fog')
+    ) {
+
+        const pX =
+            player.x * cSize +
+            cSize / 2;
+
+        const pY =
+            player.y * cSize +
+            cSize / 2;
+
+
+        ctx.fillStyle =
+            "rgba(0,0,0,0.72)";
+
+
+        ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+        ctx.globalCompositeOperation =
+            'destination-out';
+
+
+        const viewRadius =
+            cSize * 5.5;
+
+
+        const grad =
+            ctx.createRadialGradient(
+                pX,
+                pY,
+                0,
+                pX,
+                pY,
+                viewRadius
+            );
+
+
+        grad.addColorStop(
+            0,
+            'rgba(0,0,0,1)'
+        );
+
+        grad.addColorStop(
+            0.7,
+            'rgba(0,0,0,0.8)'
+        );
+
+        grad.addColorStop(
+            1,
+            'rgba(0,0,0,0)'
+        );
+
+
+        ctx.fillStyle =
+            grad;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            pX,
+            pY,
+            viewRadius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        ctx.globalCompositeOperation =
+            'source-over';
+
+    }
+
+
+    requestAnimationFrame(
+        renderLoop
+    );
+
+}
+
+
+/* =========================================================
+   SOLO 업적
+========================================================= */
+
+const SOLO_ACHIEVEMENTS = {
+    solo_first: {name:'SOLO FIRST', desc:'SOLO PLAY에서 처음으로 스테이지를 클리어하세요.'},
+    solo_speed: {name:'SOLO SPEED', desc:'SOLO PLAY에서 60초 이내에 클리어하세요.'},
+    solo_pure: {name:'PURE RUN', desc:'메인 모드 없이 SOLO 스테이지를 클리어하세요.'},
+    solo_record: {name:'RECORD BREAKER', desc:'서로 다른 5개 스테이지에서 개인 최고 기록을 세우세요.'},
+    solo_final: {name:'FINAL EXIT', desc:'SOLO PLAY에서 STAGE 13을 클리어하세요.'},
+    solo_conqueror: {name:'MAZE CONQUEROR', desc:'SOLO PLAY의 13개 스테이지를 모두 클리어하세요.'}
+};
+
+function getEXAchievements(){
+    try{return JSON.parse(localStorage.getItem('exmaze-achievements')||'{}')}catch{return {}}
+}
+function saveEXAchievements(a){localStorage.setItem('exmaze-achievements',JSON.stringify(a))}
+function unlockEXAchievement(id){
+    const a=getEXAchievements();
+    if(a[id]) return false;
+    a[id]={time:Date.now()};
+    saveEXAchievements(a);
+    const x=SOLO_ACHIEVEMENTS[id];
+    if(x) showSoloAchievementToast(x.name);
+    return true;
+}
+function showSoloAchievementToast(name){
+    let box=document.getElementById('soloAchievementToast');
+    if(!box){
+        box=document.createElement('div');
+        box.id='soloAchievementToast';
+        box.style.cssText='position:fixed;left:50%;top:22px;transform:translate(-50%,-140%);width:min(430px,90vw);padding:15px 18px;background:#071018f5;border:1px solid #ffd34d;box-shadow:0 0 35px #ffd34d33;z-index:100;text-align:center;transition:.35s';
+        document.body.appendChild(box);
+    }
+    box.innerHTML=`<b style="display:block;font-size:10px;letter-spacing:.18em;color:#ffd34d">🏆 ACHIEVEMENT UNLOCKED</b><strong style="display:block;font-size:20px;margin:5px 0">${name}</strong><small style="color:#9bb0b9">SOLO PLAY</small>`;
+    requestAnimationFrame(()=>box.style.transform='translate(-50%,0)');
+    clearTimeout(showSoloAchievementToast.t);
+    showSoloAchievementToast.t=setTimeout(()=>box.style.transform='translate(-50%,-140%)',3500);
+}
+function updateSoloAchievements(recordTime,isNewBest){
+    unlockEXAchievement('solo_first');
+    if(recordTime<=60) unlockEXAchievement('solo_speed');
+    if(selectedModes.size===0) unlockEXAchievement('solo_pure');
+    if(isNewBest){
+        let stages=[];
+        try{stages=JSON.parse(localStorage.getItem('exmaze-solo-record-stages')||'[]')}catch{}
+        if(!stages.includes(curIdx)) stages.push(curIdx);
+        localStorage.setItem('exmaze-solo-record-stages',JSON.stringify(stages));
+        if(stages.length>=5) unlockEXAchievement('solo_record');
+    }
+    if(curIdx===stages.length-1) unlockEXAchievement('solo_final');
+    let cleared=[];
+    try{cleared=JSON.parse(localStorage.getItem('exmaze-solo-cleared-stages')||'[]')}catch{}
+    if(!cleared.includes(curIdx)) cleared.push(curIdx);
+    localStorage.setItem('exmaze-solo-cleared-stages',JSON.stringify(cleared));
+    if(cleared.length>=stages.length) unlockEXAchievement('solo_conqueror');
+    if(Object.keys(getEXAchievements()).filter(k=>k!=='ex_master').length>=12){
+        const a=getEXAchievements();
+        if(!a.ex_master){
+            a.ex_master={time:Date.now()};
+            saveEXAchievements(a);
+            showSoloAchievementToast('EX:MASTER');
+        }
+    }
+}
+
+/* =========================================================
+   스테이지 클리어
+========================================================= */
+
+const EXCOIN_KEY='exmaze-coins';
+function addEXCoin(amount){const n=Math.max(0,Math.floor(Number(localStorage.getItem(EXCOIN_KEY)||0)+amount));localStorage.setItem(EXCOIN_KEY,String(n));return n;}
+
+function checkClear() {
+
+    isStarted = false;
+
+
+    activeMoves = {
+        up:false,
+        down:false,
+        left:false,
+        right:false
+    };
+
+
+    effectSound.currentTime = 0;
+
+
+    effectSound.play().catch(
+        e => console.log(
+            "효과음:",
+            e
+        )
+    );
+
+
+    const clearModal =
+        document.getElementById(
+            'clear-modal'
+        );
+
+
+    const recordTime = Math.max(0.01,(performance.now()-stageStartTime)/1000);
+    const key = `inchang-best-stage-${curIdx}`;
+    const old = Number(localStorage.getItem(key) || 0);
+    const isNewBest = !old || recordTime < old;
+    if (isNewBest) localStorage.setItem(key, recordTime.toFixed(2));
+    bestTime = Number(localStorage.getItem(key));
+    updateSoloAchievements(recordTime, isNewBest);
+    addEXCoin(100);
+    if(isNewBest) addEXCoin(50);
+    localStorage.setItem(`inchang-ghost-stage-${curIdx}`, JSON.stringify(playerPath.slice(0,3000)));
+    const unlocked=Math.max(getUnlockedStage(), Math.min(stages.length,curIdx+2));
+    localStorage.setItem('inchang-unlocked-stage', unlocked);
+    const rank=rankForTime(recordTime,curIdx);
+    const elapsedRun=festivalRunStarted&&runStart>0?Math.max(0,(performance.now()-runStart)/1000):recordTime;
+    saveFestivalProgress(curIdx,elapsedRun,false);
+
+    document.getElementById('clear-stage').innerText=`STAGE ${String(curIdx + 1).padStart(2,'0')} COMPLETE`;
+    const panel=document.querySelector('#clear-modal .clear-panel');
+    panel.innerHTML=`<div class="clear-title">${isNewBest?'🏆 NEW RECORD':'STAGE CLEAR'}</div><div class="clear-stage">STAGE ${String(curIdx+1).padStart(2,'0')} COMPLETE</div><div class="clear-rank rank-${rank.toLowerCase()}">${rank}</div><div class="clear-record">TIME ${recordTime.toFixed(2)}s · BEST ${bestTime.toFixed(2)}s${isNewBest?' · NEW BEST':''}</div><div class="clear-message">${curIdx<stages.length-1?'다음 스테이지를 준비하세요...':'EX:MAZE를 정복했습니다!'}</div>`;
+
+
+    clearModal.style.display =
+        'flex';
+
+
+    setTimeout(() => {
+
+        if(
+            curIdx <
+            stages.length - 1
+        ) {
+
+            curIdx++;
+
+
+            clearModal.style.display =
+                'none';
+
+
+            init();
+
+
+            updateStageBgm();
+
+
+            showStageIntro();
+
+        }
+
+        else {
+
+            showFinalClear();
+
+        }
+
+    }, 1800);
+
+}
+
+
+/* =========================================================
+   최종 클리어
+========================================================= */
+
+function showFinalClear() {
+    const clearModal=document.getElementById('clear-modal');
+    const elapsed=festivalRunStarted&&runStart>0?Math.max(0,(performance.now()-runStart)/1000):0;
+    saveFestivalProgress(stages.length-1,elapsed,true);
+    clearModal.innerHTML=`
+        <div class="clear-panel">
+            <div class="clear-title">🏆 EXTREME CLEAR</div>
+            <div class="clear-stage">ALL 13 STAGES COMPLETE</div>
+            <div class="clear-record">PLAYER: ${escapeFestivalText(festivalPlayerName)} · TOTAL TIME ${formatFestivalTime(elapsed)}</div>
+            <div class="clear-message">EX:MAZE를 정복했습니다!</div>
+            <button class="start-btn" onclick="openLeaderboard()">🥇 VIEW LEADERBOARD</button>
+            <button class="lobby-back" onclick="location.reload()">PLAY AGAIN</button>
+        </div>`;
+    clearModal.style.display='flex';
+}
+function escapeFestivalText(value){return String(value||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function formatFestivalTime(seconds){const n=Math.max(0,Number(seconds)||0);return `${String(Math.floor(n/60)).padStart(2,'0')}:${(n%60).toFixed(2).padStart(5,'0')}`;}
+
+
+/* =========================================================
+   키보드
+========================================================= */
+
+const keyHandler =
+    (e) => {
+
+        const key =
+            e.key.toLowerCase();
+
+
+        const isDown =
+            e.type === 'keydown';
+
+
+        if(
+            [
+                'w',
+                'a',
+                's',
+                'd',
+                'arrowup',
+                'arrowdown',
+                'arrowleft',
+                'arrowright'
+            ].includes(key)
+        ) {
+
+            e.preventDefault();
+
+
+            if(
+                key === 'w' ||
+                key === 'arrowup'
+            )
+                activeMoves.up =
+                    isDown;
+
+
+            if(
+                key === 's' ||
+                key === 'arrowdown'
+            )
+                activeMoves.down =
+                    isDown;
+
+
+            if(
+                key === 'a' ||
+                key === 'arrowleft'
+            )
+                activeMoves.left =
+                    isDown;
+
+
+            if(
+                key === 'd' ||
+                key === 'arrowright'
+            )
+                activeMoves.right =
+                    isDown;
+
+        }
+
+    };
+
+
+window.addEventListener(
+    'keydown',
+    keyHandler
+);
+
+
+window.addEventListener(
+    'keyup',
+    keyHandler
+);
+
+
+/* =========================================================
+   화면 크기 변경
+========================================================= */
+
+window.addEventListener(
+    'resize',
+    () => {
+
+        if(
+            maze &&
+            isStarted
+        ) {
+
+            const oldPlayer =
+                {...player};
+
+
+            init();
+
+
+            player =
+                oldPlayer;
+
+        }
+
+    }
+);
+
+</script>
+
+
+<script>
+/* EX:MAZE Festival Standalone — swipe once, hold to keep moving */
+(function(){
+  const canvas = document.getElementById('mazeCanvas');
+  if (!canvas) return;
+  let pointerId = null;
+  let startX = 0, startY = 0;
+  let chosenDirection = null;
+  const threshold = 18;
+  const dirs = ['up','down','left','right'];
+
+  function clearHeldDirection(){
+    for (const d of dirs) activeMoves[d] = false;
+    chosenDirection = null;
+    pointerId = null;
+  }
+  function setHeldDirection(dir){
+    for (const d of dirs) activeMoves[d] = (d === dir);
+    chosenDirection = dir;
+  }
+  canvas.addEventListener('pointerdown', function(e){
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (!isStarted && document.querySelector('.overlay:not(.hidden), .panel:not(.hidden)')) return;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    chosenDirection = null;
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('pointermove', function(e){
+    if (pointerId !== e.pointerId || chosenDirection) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
+    if (Math.abs(dx) > Math.abs(dy)) setHeldDirection(dx > 0 ? 'right' : 'left');
+    else setHeldDirection(dy > 0 ? 'down' : 'up');
+    e.preventDefault();
+  }, {passive:false});
+  function finish(e){
+    if (pointerId === null || (e && e.pointerId !== pointerId)) return;
+    clearHeldDirection();
+  }
+  canvas.addEventListener('pointerup', finish, {passive:true});
+  canvas.addEventListener('pointercancel', finish, {passive:true});
+  canvas.addEventListener('lostpointercapture', finish, {passive:true});
+  window.addEventListener('blur', clearHeldDirection);
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) clearHeldDirection(); });
+})();
+</script>
+
+<script>
+/* EX:MAZE 1.5 — iPad/Safari long-press protection */
+(function(){
+  function editable(el){
+    return !!(el && el.closest && el.closest('input,textarea,select,[contenteditable="true"]'));
+  }
+  function block(e){ if(!editable(e.target)) e.preventDefault(); }
+  document.addEventListener('selectstart', block, {passive:false});
+  document.addEventListener('contextmenu', block, {passive:false});
+  document.addEventListener('dragstart', block, {passive:false});
+  document.addEventListener('copy', block, {passive:false});
+  document.addEventListener('cut', block, {passive:false});
+  document.addEventListener('gesturestart', block, {passive:false});
+  document.addEventListener('gesturechange', block, {passive:false});
+  document.addEventListener('gestureend', block, {passive:false});
+  document.addEventListener('touchend', function(){
+    if(window.getSelection) {
+      const s=window.getSelection();
+      if(s && s.rangeCount) s.removeAllRanges();
+    }
+  }, {passive:true});
+})();
+</script>
+
+</body>
+</html>
