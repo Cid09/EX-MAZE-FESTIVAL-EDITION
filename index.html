@@ -2737,6 +2737,33 @@ function makeMaze(size) {
 
     m[size - 2][size - 2] = 0;
 
+    // Ensure the exit is reachable on every stage. Find a route from the start
+    // to the exit; if a generated layout ever leaves it disconnected, carve
+    // a guaranteed corridor along the discovered shortest grid route.
+    {
+        const start = [1, 1];
+        const goal = [size - 2, size - 2];
+        const queue = [start];
+        const seen = new Set([`${start[0]},${start[1]}`]);
+        const prev = new Map();
+        let found = false;
+        for (let qi = 0; qi < queue.length; qi++) {
+            const [cx, cy] = queue[qi];
+            if (cx === goal[0] && cy === goal[1]) { found = true; break; }
+            for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+                const nx = cx + dx, ny = cy + dy, key = `${nx},${ny}`;
+                if (nx < 1 || ny < 1 || nx >= size - 1 || ny >= size - 1 || seen.has(key)) continue;
+                if (m[ny][nx] !== 0) continue;
+                seen.add(key); prev.set(key, [cx, cy]); queue.push([nx, ny]);
+            }
+        }
+        if (!found) {
+            // A simple L-shaped fallback always connects start and exit.
+            for (let x = 1; x <= size - 2; x++) m[1][x] = 0;
+            for (let y = 1; y <= size - 2; y++) m[y][size - 2] = 0;
+        }
+    }
+
     // RANDOM MAZE: 기존 미로에 추가 통로를 일부 열어 매번 다른 구조 생성
     if (selectedSupports.has('random')) {
         const openings = Math.floor(size * 1.5);
@@ -3002,13 +3029,14 @@ function move(dir) {
     }
 
 
-    if(
+    // Check the exit after every move attempt. Guard against duplicate clear
+    // calls while the result panel is already open.
+    if (
         player.x === gSize - 2 &&
-        player.y === gSize - 2
+        player.y === gSize - 2 &&
+        document.getElementById('clear-modal').style.display !== 'flex'
     ) {
-
         checkClear();
-
     }
 
 }
