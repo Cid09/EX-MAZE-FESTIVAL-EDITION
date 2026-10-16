@@ -1449,6 +1449,24 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 @media (max-width:520px){.start-panel{width:min(94vw,520px);max-height:92dvh;overflow:auto;padding:18px 14px}.name-entry input{font-size:16px}.leaderboard-list{max-height:52dvh}}
 
 
+
+/* FESTIVAL LEADERBOARD SHOWCASE ANIMATIONS */
+@keyframes rankSlideIn{0%{opacity:0;transform:translateX(-26px) scale(.97);filter:brightness(1.8)}70%{opacity:1;transform:translateX(3px) scale(1.01)}100%{opacity:1;transform:translateX(0) scale(1);filter:brightness(1)}}
+@keyframes rankGlow{0%,100%{box-shadow:inset 0 0 0 rgba(85,217,255,0)}50%{box-shadow:inset 0 0 24px rgba(85,217,255,.16),0 0 16px rgba(85,217,255,.1)}}
+@keyframes crownPop{0%{transform:scale(.2) rotate(-24deg);opacity:0}70%{transform:scale(1.25) rotate(8deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes recordSweep{0%{left:-80%;opacity:0}20%{opacity:1}100%{left:140%;opacity:0}}
+.leader-row{position:relative;overflow:hidden;isolation:isolate;animation:rankSlideIn .52s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--rank-index,0)*65ms);border-radius:8px;transition:background .2s,transform .2s}
+.leader-row::after{content:"";position:absolute;top:0;bottom:0;left:-80%;width:42%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.12),transparent);transform:skewX(-18deg);pointer-events:none;animation:recordSweep 1s ease-out both;animation-delay:calc(var(--rank-index,0)*65ms + 160ms);z-index:-1}
+.leader-row.rank-top-1{border:1px solid rgba(255,216,107,.55);background:linear-gradient(90deg,rgba(255,216,107,.13),rgba(255,216,107,.025));animation-name:rankSlideIn,rankGlow;animation-duration:.52s,2.4s;animation-delay:calc(var(--rank-index,0)*65ms),1s;animation-iteration-count:1,infinite}
+.leader-row.rank-top-2{border:1px solid rgba(217,231,242,.32);background:linear-gradient(90deg,rgba(217,231,242,.09),transparent)}
+.leader-row.rank-top-3{border:1px solid rgba(217,164,119,.28);background:linear-gradient(90deg,rgba(217,164,119,.08),transparent)}
+.leader-row.rank-new-record{outline:1px solid rgba(85,217,255,.75);box-shadow:0 0 20px rgba(85,217,255,.18)}
+.leader-rank{display:flex;align-items:center;justify-content:center;min-height:30px}
+.leader-row.rank-top-1 .leader-rank,.leader-row.rank-top-2 .leader-rank,.leader-row.rank-top-3 .leader-rank{font-size:23px;animation:crownPop .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--rank-index,0)*65ms + 120ms)}
+.leader-row.rank-top-1 .leader-rank{color:#ffd86b}.leader-row.rank-top-2 .leader-rank{color:#d9e7f2}.leader-row.rank-top-3 .leader-rank{color:#d9a477}
+.leader-row .leader-name{transition:color .2s}.leader-row.rank-new-record .leader-name::after{content:'  NEW RECORD';display:inline-block;color:#7dffb2;font-size:8px;letter-spacing:.08em;margin-left:5px;animation:crownPop .45s ease both}
+@media(prefers-reduced-motion:reduce){.leader-row,.leader-row::after,.leader-rank,.leader-row.rank-new-record .leader-name::after{animation:none!important;transition:none!important}}
+
 /* FESTIVAL SPLASH SCREEN — desktop display + responsive tablets/phones */
 #start-modal{isolation:isolate;background:#03080f;overflow-y:auto;padding:clamp(10px,2.5vw,28px);box-sizing:border-box}
 #start-modal::before{inset:0;z-index:-2;opacity:.8;background:linear-gradient(rgba(3,10,18,.72),rgba(2,7,13,.94)),repeating-linear-gradient(0deg,transparent 0 39px,rgba(65,190,255,.075) 40px),repeating-linear-gradient(90deg,transparent 0 39px,rgba(65,190,255,.075) 40px);animation:mazeDrift 18s linear infinite}
@@ -2364,13 +2382,18 @@ function openLeaderboard(){
     document.getElementById('leaderboard-modal').style.display='flex';
     setLeaderboardStatus('● LOCAL RECORDS · 이 컴퓨터에 저장된 기록','#7dffb2');
     if(!board.length){list.innerHTML='<div class="leader-empty">아직 등록된 기록이 없습니다.<br>미로를 플레이하고 첫 기록을 남겨보세요!</div>';return;}
+    const newestName=String(sessionStorage.getItem('exmaze-festival-new-record')||'').toLocaleLowerCase();
     board.slice(0,50).forEach((entry,index)=>{
-        const row=document.createElement('div');row.className='leader-row';
-        const rank=document.createElement('div');rank.className='leader-rank';rank.textContent=String(index+1).padStart(2,'0');
+        const row=document.createElement('div');
+        row.className='leader-row'+(index===0?' rank-top-1':index===1?' rank-top-2':index===2?' rank-top-3':'');
+        row.style.setProperty('--rank-index',String(index));
+        if(newestName && String(entry.name||'').toLocaleLowerCase()===newestName){row.classList.add('rank-new-record');}
+        const rank=document.createElement('div');rank.className='leader-rank';rank.textContent=index===0?'🥇':index===1?'🥈':index===2?'🥉':String(index+1).padStart(2,'0');
         const player=document.createElement('div');const name=document.createElement('div');name.className='leader-name';name.textContent=entry.name||'PLAYER';
         const meta=document.createElement('small');meta.className='leader-meta';meta.textContent=entry.completed_all||entry.completedAll?`13 STAGES · ALL CLEAR${entry.grade?' · '+entry.grade:''}`:`STAGE ${String(entry.stage||1).padStart(2,'0')} REACHED`;player.append(name,meta);
         const score=document.createElement('div');score.className='leader-score';score.textContent=Number(entry.time||0).toFixed(2)+'s';row.append(rank,player,score);list.appendChild(row);
     });
+    try { sessionStorage.removeItem('exmaze-festival-new-record'); } catch(_) {}
 }
 function closeLeaderboard(){document.getElementById('leaderboard-modal').style.display='none';document.getElementById('start-modal').style.display='flex';showLobbyHome();}
 
@@ -3774,6 +3797,7 @@ function getFestivalRewardGrade(seconds) {
 
 function showFinalClear() {
     const clearModal=document.getElementById('clear-modal');
+    try { sessionStorage.setItem('exmaze-festival-new-record', String(festivalPlayerName||'').toLocaleLowerCase()); } catch(_) {}
     const elapsed=festivalRunStarted&&runStart>0?Math.max(0,(performance.now()-runStart)/1000):0;
     const reward=getFestivalRewardGrade(elapsed);
     saveFestivalProgress(stages.length-1,elapsed,true);
