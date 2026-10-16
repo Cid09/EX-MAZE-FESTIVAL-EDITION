@@ -1992,6 +1992,9 @@ let maze;
 let gSize;
 
 let cSize;
+// EX:MAZE SOLO camera-follow viewport: render a 21-cell window around the player.
+const viewCells = 21;
+let camera = { x: 0, y: 0 };
 
 let player;
 
@@ -2524,8 +2527,8 @@ function init() {
         size;
 
 
-    cSize =
-        size / gSize;
+    // Keep cell size fixed to the camera viewport rather than shrinking the whole maze.
+    cSize = size / viewCells;
 
 
     maze =
@@ -2536,6 +2539,10 @@ function init() {
         x:1,
         y:1
     };
+
+    // Start with the player near the centre, then smoothly follow movement.
+    camera.x = player.x - viewCells / 2 + 0.5;
+    camera.y = player.y - viewCells / 2 + 0.5;
 
 
     playerPath = [
@@ -3135,6 +3142,18 @@ function renderLoop() {
     }
 
 
+    /* EX:MAZE SOLO camera follow */
+    const targetCamX = player.x - viewCells / 2 + 0.5;
+    const targetCamY = player.y - viewCells / 2 + 0.5;
+    camera.x += (targetCamX - camera.x) * 0.18;
+    camera.y += (targetCamY - camera.y) * 0.18;
+
+    // Fill the viewport, then draw the maze in world coordinates shifted by the camera.
+    ctx.fillStyle = '#020509';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(-camera.x * cSize, -camera.y * cSize);
+
     /* 미로 */
 
     for(
@@ -3511,10 +3530,13 @@ function renderLoop() {
     ctx.shadowBlur = 0;
 
 
+    // Stop camera transform before screen-space lighting and fog overlays.
+    ctx.restore();
+
     /* DARKNESS SUPPORT */
     if (selectedSupports.has('darkness') || specialActive('darkness')) {
-        const pX = player.x * cSize + cSize / 2;
-        const pY = player.y * cSize + cSize / 2;
+        const pX = (player.x - camera.x) * cSize + cSize / 2;
+        const pY = (player.y - camera.y) * cSize + cSize / 2;
         ctx.fillStyle = 'rgba(0,0,0,0.86)';
         ctx.fillRect(0,0,canvas.width,canvas.height);
         ctx.globalCompositeOperation = 'destination-out';
@@ -3536,11 +3558,11 @@ function renderLoop() {
     ) {
 
         const pX =
-            player.x * cSize +
+            (player.x - camera.x) * cSize +
             cSize / 2;
 
         const pY =
-            player.y * cSize +
+            (player.y - camera.y) * cSize +
             cSize / 2;
 
 
