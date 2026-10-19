@@ -3147,6 +3147,8 @@ function move(dir) {
         player.y =
             ny;
 
+        // Festival checkpoint pickup must run after the player position changes.
+        if (typeof collectFestivalCheckpoint === 'function') collectFestivalCheckpoint();
 
         playerPath.push({
 
@@ -3215,6 +3217,9 @@ function showGameOver(message) {
 ========================================================= */
 
 function renderLoop() {
+
+    // Safety net for checkpoint pickup when the player is already on its tile.
+    if (player && typeof collectFestivalCheckpoint === 'function') collectFestivalCheckpoint();
 
     ctx.clearRect(
         0,
@@ -4053,28 +4058,20 @@ const keyHandler =
             target.isContentEditable
         )) return;
 
-        const key =
-            e.key.toLowerCase();
+        const physicalKeys = {
+            KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd',
+            ArrowUp: 'arrowup', ArrowDown: 'arrowdown',
+            ArrowLeft: 'arrowleft', ArrowRight: 'arrowright'
+        };
+        const key = physicalKeys[e.code] || String(e.key || '').toLowerCase();
+
+        const isDown = e.type === 'keydown';
 
 
-        const isDown =
-            e.type === 'keydown';
-
-
-        if(
-            [
-                'w',
-                'a',
-                's',
-                'd',
-                'arrowup',
-                'arrowdown',
-                'arrowleft',
-                'arrowright'
-            ].includes(key)
+        if (
+            ['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)
         ) {
-
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
 
 
             if(
