@@ -2532,6 +2532,12 @@ function init() {
     try { maze = makeMaze(gSize); }
     finally { Math.random = originalRandom; }
 
+    // Guarantee a walkable exit and approach tiles on every stage.
+    if (maze && maze[gSize - 2]) {
+        maze[gSize - 2][gSize - 2] = 0;
+        maze[gSize - 2][gSize - 3] = 0;
+        maze[gSize - 3][gSize - 2] = 0;
+    }
 
     player = {
         x:1,
@@ -3196,7 +3202,9 @@ function renderLoop() {
 
     // Backup goal check in the animation loop as well as after movement.
     // This prevents a missed clear if input and rendering happen on adjacent frames.
-    if (isStarted && player && player.x === gSize - 2 && player.y === gSize - 2) {
+    if (isStarted && player &&
+        Number(player.x) === gSize - 2 &&
+        Number(player.y) === gSize - 2) {
         checkGoalReached();
     }
 
