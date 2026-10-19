@@ -1590,7 +1590,7 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
             </span>
 
             <span id="stage-display">
-                01 / 13
+                01 / 05
             </span>
 
         </div>
@@ -1666,9 +1666,9 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
                 <div class="festival-title">EX<span>:</span>MAZE</div>
                 <div class="festival-title-line"></div>
                 <h1>FIND THE EXIT.<br><em>BEAT THE CLOCK.</em></h1>
-                <p class="festival-lead">13 STAGES. ONE ESCAPE.<br>미로를 탈출하고 당신의 기록을 남겨보세요.</p>
+                <p class="festival-lead">5 FIXED STAGES. ONE ESCAPE.<br>미로를 탈출하고 당신의 기록을 남겨보세요.</p>
                 <div class="festival-stat-row">
-                  <div><b>13</b><small>STAGES</small></div>
+                  <div><b>05</b><small>STAGES</small></div>
                   <div><b>∞</b><small>RETRIES</small></div>
                   <div><b>01</b><small>MISSION</small></div>
                 </div>
@@ -1975,14 +1975,8 @@ const ctx =
     canvas.getContext('2d');
 
 
-// 스테이지는 13개를 유지하되, 후반에도 너무 오래 걸리지 않도록 완만하게 증가
-const stages = [
-    {s:15}, {s:17}, {s:19},
-    {s:21}, {s:21}, {s:23},
-    {s:23}, {s:25}, {s:25},
-    {s:27}, {s:27}, {s:29},
-    {s:31}
-];
+// 축제 경쟁용: 5개 고정 스테이지. 모든 참가자에게 같은 미로가 생성되도록 시드 고정.
+const stages = [{s:17}, {s:19}, {s:21}, {s:23}, {s:25}];
 
 
 let curIdx = 0;
@@ -2080,31 +2074,11 @@ let currentBgm = null;
 
 const stageNames = [
 
-    "THE BEGINNING",
-
-    "FIRST TRIAL",
-
-    "THE MAZE",
-
-    "DEEP ROUTE",
-
-    "DARK PATH",
-
-    "LOST AREA",
-
-    "THE LABYRINTH",
-
-    "CHAOS ZONE",
-
-    "DANGER ZONE",
-
-    "NIGHTMARE",
-
-    "EXTREME",
-
-    "FINAL TRIAL",
-
-    "EX:MAZE"
+    "WARM-UP ROUTE",
+    "BRANCHING PATHS",
+    "DEAD-END DISTRICT",
+    "THE LONG DETOUR",
+    "EX:MAZE FINAL TRIAL"
 
 ];
 
@@ -2359,7 +2333,7 @@ function saveFestivalProgress(stageIndex,elapsedSeconds,completedAll=false){
     if(!festivalPlayerName||!festivalRunStarted)return;
     const payload={
         name:String(festivalPlayerName).trim().replace(/\s+/g,' ').slice(0,16),
-        stage:Math.max(1,Math.min(13,Number(stageIndex)+1)),
+        stage:Math.max(1,Math.min(stages.length,Number(stageIndex)+1)),
         time:Number(Math.max(0.01,Number(elapsedSeconds)||0).toFixed(2)),
         completedAll:!!completedAll
     };
@@ -2393,7 +2367,7 @@ function openLeaderboard(){
         if(newestName && String(entry.name||'').toLocaleLowerCase()===newestName){row.classList.add('rank-new-record');}
         const rank=document.createElement('div');rank.className='leader-rank';rank.textContent=index===0?'🥇':index===1?'🥈':index===2?'🥉':String(index+1).padStart(2,'0');
         const player=document.createElement('div');const name=document.createElement('div');name.className='leader-name';name.textContent=entry.name||'PLAYER';
-        const meta=document.createElement('small');meta.className='leader-meta';meta.textContent=entry.completed_all||entry.completedAll?`13 STAGES · ALL CLEAR${entry.grade?' · '+entry.grade:''}`:`STAGE ${String(entry.stage||1).padStart(2,'0')} REACHED`;player.append(name,meta);
+        const meta=document.createElement('small');meta.className='leader-meta';meta.textContent=entry.completed_all||entry.completedAll?`5 STAGES · ALL CLEAR${entry.grade?' · '+entry.grade:''}`:`STAGE ${String(entry.stage||1).padStart(2,'0')} REACHED`;player.append(name,meta);
         const score=document.createElement('div');score.className='leader-score';score.textContent=Number(entry.time||0).toFixed(2)+'s';row.append(rank,player,score);list.appendChild(row);
     });
     try { sessionStorage.removeItem('exmaze-festival-new-record'); } catch(_) {}
@@ -2493,6 +2467,8 @@ function showStageIntro() {
 
 function init() {
 
+    stageClearInProgress = false;
+
     const stage =
         stages[curIdx];
 
@@ -2531,8 +2507,15 @@ function init() {
     cSize = size / viewCells;
 
 
-    maze =
-        makeMaze(gSize);
+    // Stage-specific seeded generation: same stage always has the same maze for every participant.
+    const originalRandom = Math.random;
+    let seed = (0x5EED1234 + (curIdx + 1) * 2654435761) >>> 0;
+    Math.random = function() {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+    };
+    try { maze = makeMaze(gSize); }
+    finally { Math.random = originalRandom; }
 
 
     player = {
@@ -2757,12 +2740,20 @@ function makeMaze(size) {
                 seen.add(key); prev.set(key, [cx, cy]); queue.push([nx, ny]);
             }
         }
-        // Always carve a guaranteed corridor to the exit. This is deliberately
-        // unconditional: stage modifiers/random openings must never leave an
-        // exit tile unreachable because of an unusual generated layout.
-        for (let x = 1; x <= size - 2; x++) m[1][x] = 0;
-        for (let y = 1; y <= size - 2; y++) m[y][size - 2] = 0;
-        m[size - 2][size - 2] = 0;
+        // Perfect-maze generation should connect the exit naturally. Only recover if a future
+        // modifier accidentally disconnects it; preserve the shortest discovered route where possible.
+        if (!found) {
+            let x = goal[0], y = goal[1];
+            m[y][x] = 0;
+            while (x !== start[0] || y !== start[1]) {
+                const parent = prev.get(`${x},${y}`);
+                if (!parent) break;
+                [x, y] = parent;
+                m[y][x] = 0;
+            }
+            m[start[1]][start[0]] = 0;
+            m[goal[1]][goal[0]] = 0;
+        }
     }
 
     // RANDOM MAZE: 기존 미로에 추가 통로를 일부 열어 매번 다른 구조 생성
@@ -2933,11 +2924,25 @@ function processInput() {
    이동
 ========================================================= */
 
+let stageClearInProgress = false;
+
 function checkGoalReached() {
-    if (!player || !Number.isFinite(gSize)) return false;
-    if (player.x !== gSize - 2 || player.y !== gSize - 2) return false;
+    if (!player || !Number.isFinite(gSize) || stageClearInProgress) return false;
+
+    // The exit tile is the bottom-right inner cell of the current maze.
+    const goalX = gSize - 2;
+    const goalY = gSize - 2;
+    if (Number(player.x) !== goalX || Number(player.y) !== goalY) return false;
+
     const modal = document.getElementById('clear-modal');
-    if (!modal || modal.style.display === 'flex') return true;
+    if (!modal) {
+        console.error('[EX:MAZE] clear-modal element is missing');
+        return false;
+    }
+
+    // Do not use modal.style.display as the clear guard: CSS and inline display
+    // can disagree. A dedicated flag prevents duplicate clear calls reliably.
+    stageClearInProgress = true;
     checkClear();
     return true;
 }
@@ -3691,7 +3696,7 @@ const SOLO_ACHIEVEMENTS = {
     solo_pure: {name:'PURE RUN', desc:'메인 모드 없이 SOLO 스테이지를 클리어하세요.'},
     solo_record: {name:'RECORD BREAKER', desc:'서로 다른 5개 스테이지에서 개인 최고 기록을 세우세요.'},
     solo_final: {name:'FINAL EXIT', desc:'SOLO PLAY에서 STAGE 13을 클리어하세요.'},
-    solo_conqueror: {name:'MAZE CONQUEROR', desc:'SOLO PLAY의 13개 스테이지를 모두 클리어하세요.'}
+    solo_conqueror: {name:'MAZE CONQUEROR', desc:'SOLO PLAY의 5개 스테이지를 모두 클리어하세요.'}
 };
 
 function getEXAchievements(){
@@ -3756,6 +3761,8 @@ function addEXCoin(amount){const n=Math.max(0,Math.floor(Number(localStorage.get
 
 function checkClear() {
 
+    // Defensive idempotency: a clear can be requested by both input and render loop.
+    if (!stageClearInProgress) stageClearInProgress = true;
     isStarted = false;
 
 
@@ -3849,10 +3856,11 @@ function checkClear() {
 ========================================================= */
 
 function getFestivalRewardGrade(seconds) {
-    // 축제 보상 등급: GOLD <= 2분, SILVER <= 4분, BRONZE는 그 이후 클리어
-    if (seconds <= 120) return { grade:'GOLD', medal:'🥇', reward:'봉지 과자 2개', color:'#ffd86b' };
-    if (seconds <= 240) return { grade:'SILVER', medal:'🥈', reward:'봉지 과자 1개', color:'#d9e7f2' };
-    return { grade:'BRONZE', medal:'🥉', reward:'종이상자 과자 1개', color:'#d9a477' };
+    // 축제 보상: 5개 스테이지 전체 완주자에게만 지급
+    // GOLD <= 3분: 봉지 과자 1개 / SILVER <= 5분: 박스 과자 1개 / BRONZE: 사탕
+    if (seconds <= 180) return { grade:'GOLD', medal:'🥇', reward:'봉지 과자 1개', color:'#ffd86b' };
+    if (seconds <= 300) return { grade:'SILVER', medal:'🥈', reward:'박스 과자 1개', color:'#d9e7f2' };
+    return { grade:'BRONZE', medal:'🥉', reward:'참가상 사탕', color:'#d9a477' };
 }
 
 function showFinalClear() {
@@ -3870,11 +3878,12 @@ function showFinalClear() {
     clearModal.innerHTML=`
         <div class="clear-panel">
             <div class="clear-title">🏆 EXTREME CLEAR</div>
-            <div class="clear-stage">ALL 13 STAGES COMPLETE</div>
+            <div class="clear-stage">ALL 5 STAGES COMPLETE</div>
             <div class="clear-record">PLAYER: ${escapeFestivalText(festivalPlayerName)} · TOTAL TIME ${formatFestivalTime(elapsed)}</div>
             <div style="margin:18px auto 8px;color:${reward.color};font-size:34px;font-weight:1000;text-shadow:0 0 20px ${reward.color}55">${reward.medal} ${reward.grade}</div>
             <div style="font-size:18px;font-weight:900;margin-bottom:8px">보상: ${reward.reward}</div>
-            <div class="clear-message">${reward.grade==='GOLD'?'놀라운 기록! 최고 등급을 달성했습니다!':reward.grade==='SILVER'?'훌륭해요! 실버 등급을 달성했습니다!':'끝까지 탈출 성공! 브론즈 등급을 달성했습니다!'}</div>
+            <div class="clear-message" style="font-size:12px;margin:8px auto">보상 기준: 03:00 이내 봉지 과자 · 03:00 초과~05:00 이내 박스 과자 · 05:00 초과 참가상 사탕</div>
+            <div class="clear-message">${reward.grade==='GOLD'?'3분 이내 완주! 봉지 과자 보상을 획득했습니다!':reward.grade==='SILVER'?'5분 이내 완주! 박스 과자 보상을 획득했습니다!':'완주 성공! 참가상 사탕을 받을 수 있습니다!'}</div>
             <div class="clear-message" style="font-size:11px;margin-top:6px">※ 실제 보상은 부스 진행자에게 결과 화면을 보여 주세요.</div>
             <button class="start-btn" onclick="openLeaderboard()">🥇 VIEW LEADERBOARD</button>
             <button class="lobby-back" onclick="location.reload()">PLAY AGAIN</button>
