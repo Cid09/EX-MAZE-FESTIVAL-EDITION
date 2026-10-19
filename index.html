@@ -1817,6 +1817,7 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
             <div class="start-description" id="leaderboard-status" role="status">이 컴퓨터에 저장된 축제 기록</div>
             <div class="leaderboard-list" id="leaderboard-list"></div>
             <div class="start-description">※ 기록은 이 컴퓨터의 브라우저에 저장됩니다. 브라우저 데이터를 삭제하면 기록도 사라질 수 있습니다.</div>
+            <button class="lobby-back" onclick="resetFestivalLeaderboard()" style="margin-bottom:10px;border-color:#ff7185;color:#ff9aaa">🗑 RESET RANKING</button>
             <button class="lobby-back" onclick="closeLeaderboard()">← BACK TO LOBBY</button>
         </div>
     </div>
@@ -2373,6 +2374,20 @@ function openLeaderboard(){
     try { sessionStorage.removeItem('exmaze-festival-new-record'); } catch(_) {}
 }
 function closeLeaderboard(){document.getElementById('leaderboard-modal').style.display='none';document.getElementById('start-modal').style.display='flex';showLobbyHome();}
+
+function resetFestivalLeaderboard(){
+    const ok = window.confirm('이 브라우저에 저장된 축제 순위를 모두 삭제할까요? 삭제한 기록은 복구할 수 없습니다.');
+    if(!ok) return;
+    try {
+        localStorage.removeItem(FESTIVAL_LEADERBOARD_KEY);
+        sessionStorage.removeItem('exmaze-festival-new-record');
+    } catch (err) {
+        alert('기록을 삭제하지 못했습니다. 브라우저 저장소 설정을 확인해 주세요.');
+        return;
+    }
+    openLeaderboard();
+    setLeaderboardStatus('순위 기록이 초기화되었습니다.','#7dffb2');
+}
 
 function rankForTime(time,idx){
     const target=25+idx*2.2;
@@ -3900,6 +3915,13 @@ function formatFestivalTime(seconds){const n=Math.max(0,Number(seconds)||0);retu
 
 const keyHandler =
     (e) => {
+
+        // 이름 입력창 등 텍스트 입력 중에는 WASD를 이동키로 처리하지 않는다.
+        const target = e.target;
+        if (target && (
+            target.matches('input, textarea, select') ||
+            target.isContentEditable
+        )) return;
 
         const key =
             e.key.toLowerCase();
