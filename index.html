@@ -3049,24 +3049,36 @@ function processInput() {
 let stageClearInProgress = false;
 
 function checkGoalReached() {
-    if (!player || !Number.isFinite(gSize) || stageClearInProgress) return false;
+    if (!player || !Number.isFinite(Number(gSize)) || stageClearInProgress) return false;
 
-    // The exit tile is the bottom-right inner cell of the current maze.
-    const goalX = gSize - 2;
-    const goalY = gSize - 2;
-    if (activeCheckpoint < 3) return false;
+    // Use the same inner-cell coordinates used by the exit renderer.
+    const goalX = Number(gSize) - 2;
+    const goalY = Number(gSize) - 2;
+    if (Number(activeCheckpoint) < 3) return false;
     if (Number(player.x) !== goalX || Number(player.y) !== goalY) return false;
 
-    const modal = document.getElementById('clear-modal');
-    if (!modal) {
-        console.error('[EX:MAZE] clear-modal element is missing');
-        return false;
-    }
-
-    // Do not use modal.style.display as the clear guard: CSS and inline display
-    // can disagree. A dedicated flag prevents duplicate clear calls reliably.
+    // Set the guard before calling clear logic so move/render cannot trigger it twice.
     stageClearInProgress = true;
-    checkClear();
+    try {
+        checkClear();
+    } catch (err) {
+        // If a non-essential effect/record step fails, still try to show the
+        // clear panel rather than leaving the player stuck on the exit.
+        console.error('[EX:MAZE] clear handler error:', err);
+        stageClearInProgress = true;
+        const modal = document.getElementById('clear-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+        } else {
+            const status = document.getElementById('status-msg');
+            if (status) {
+                status.textContent = 'STAGE CLEAR!';
+                status.style.opacity = '1';
+            }
+        }
+    }
     return true;
 }
 
