@@ -3969,7 +3969,7 @@ function checkClear() {
     const elapsedRun=festivalRunStarted&&runStart>0?Math.max(0,(performance.now()-runStart)/1000):recordTime;
     saveFestivalProgress(curIdx,elapsedRun,false);
 
-    document.getElementById('clear-stage').innerText=`STAGE ${String(curIdx + 1).padStart(2,'0')} COMPLETE`;
+    // (clear-stage 요소는 아래 panel.innerHTML이 매번 새로 그리므로 여기서 따로 갱신하지 않음)
     const panel=document.querySelector('#clear-modal .clear-panel');
     panel.innerHTML=`<div class="clear-title">${isNewBest?'🏆 NEW RECORD':'STAGE CLEAR'}</div><div class="clear-stage">STAGE ${String(curIdx+1).padStart(2,'0')} COMPLETE</div><div class="clear-rank rank-${rank.toLowerCase()}">${rank}</div><div class="clear-record">TIME ${recordTime.toFixed(2)}s · BEST ${bestTime.toFixed(2)}s${isNewBest?' · NEW BEST':''}</div><div class="clear-message">${curIdx<stages.length-1?'다음 스테이지를 준비하세요...':'EX:MAZE를 정복했습니다!'}</div>`;
 
