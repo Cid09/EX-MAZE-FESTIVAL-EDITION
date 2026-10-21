@@ -1549,6 +1549,39 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 #checkpoint-hud{position:absolute;left:50%;top:58px;transform:translateX(-50%);z-index:8;padding:7px 13px;border:1px solid rgba(82,232,255,.55);border-radius:999px;background:rgba(2,12,18,.82);color:#7deeff;font-size:12px;font-weight:900;letter-spacing:1.2px;box-shadow:0 0 16px rgba(82,232,255,.12);pointer-events:none;white-space:nowrap}
 #checkpoint-hud.checkpoint-pulse{animation:checkpointPulse .38s ease-out}
 @keyframes checkpointPulse{0%{transform:translateX(-50%) scale(1.12);box-shadow:0 0 22px rgba(82,232,255,.65)}100%{transform:translateX(-50%) scale(1);box-shadow:0 0 16px rgba(82,232,255,.12)}}
+
+/* ===== SPLASH: START 화면 + 블록 낙하 전환 ===== */
+#splash{position:fixed;inset:0;z-index:100000;background:#02060c;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#splash::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(0,130,255,.16),transparent 55%),repeating-linear-gradient(0deg,transparent 0 39px,rgba(65,190,255,.07) 40px),repeating-linear-gradient(90deg,transparent 0 39px,rgba(65,190,255,.07) 40px);animation:splashBgPulse 4s ease-in-out infinite}
+@keyframes splashBgPulse{0%,100%{opacity:.75}50%{opacity:1}}
+#splash-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;background:transparent;border:0;border-radius:0;box-shadow:none;z-index:auto;transition:none}
+#splash-start{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:22px 68px;font:inherit;font-size:clamp(22px,4.2vw,36px);font-weight:1000;letter-spacing:.2em;color:#eaffff;background:linear-gradient(145deg,#0d5fa8,#0a3d73);border:2px solid #5fe0ff;border-radius:14px;cursor:pointer;text-shadow:0 0 14px #7be8ffcc;animation:splashBtnPulse 1.5s ease-in-out infinite}
+@keyframes splashBtnPulse{0%,100%{box-shadow:0 0 22px #25bfff66,inset 0 0 14px #7be8ff33;transform:translate(-50%,-50%) scale(1)}50%{box-shadow:0 0 52px #25bfffcc,inset 0 0 24px #7be8ff66;transform:translate(-50%,-50%) scale(1.05)}}
+#splash-start:focus-visible{outline:3px solid #ffd65a;outline-offset:6px}
+#splash.going #splash-start{animation:none;opacity:0;transform:translate(-50%,-50%) scale(.8);transition:opacity .25s ease,transform .25s ease;pointer-events:none}
+#splash-logo-bg{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s ease;background:radial-gradient(ellipse at 50% 50%,rgba(2,8,16,.82) 0,rgba(2,8,16,.6) 26%,transparent 62%)}
+#splash-logo-bg.on{opacity:1}
+#splash-logo{position:absolute;left:0;top:0;transform-origin:0 0;opacity:0;pointer-events:none;white-space:nowrap;font-weight:1000;letter-spacing:-.075em;line-height:.9;color:#f4fbff;font-size:clamp(70px,16vw,200px);text-shadow:0 0 25px #25bfff99,0 0 70px #007dff66;will-change:transform}
+.splash-letter{--glow:#25bfff;display:inline-block;opacity:0}
+.splash-letter.colon{--glow:#ffca3a;color:#ffd65a}
+#splash-logo.show .splash-letter{animation:splashNeonOn 1.15s linear forwards;animation-delay:calc(.12s + var(--i)*110ms)}
+@keyframes splashNeonOn{
+0%{opacity:0;text-shadow:none}
+8%{opacity:.95;text-shadow:0 0 12px var(--glow)}
+15%{opacity:.1;text-shadow:none}
+26%{opacity:1;text-shadow:0 0 22px var(--glow),0 0 60px var(--glow)}
+34%{opacity:.25;text-shadow:0 0 6px var(--glow)}
+46%{opacity:1;text-shadow:0 0 26px var(--glow),0 0 70px var(--glow)}
+54%{opacity:.65;text-shadow:0 0 14px var(--glow)}
+66%{opacity:1;text-shadow:0 0 30px var(--glow),0 0 90px var(--glow),0 0 140px var(--glow)}
+100%{opacity:1;text-shadow:0 0 28px var(--glow),0 0 80px var(--glow),0 0 130px var(--glow)}}
+#splash.revealed::before{filter:brightness(1.7);transition:filter .5s ease}
+#splash-flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 50%,#fff 0,#c9f6ff 22%,rgba(90,205,255,.55) 52%,transparent 80%)}
+#splash-flash.go{animation:splashFlash .8s ease-out}
+@keyframes splashFlash{0%{opacity:0}10%{opacity:1}100%{opacity:0}}
+#splash.fade-out{opacity:0;transition:opacity .4s ease}
+@media(prefers-reduced-motion:reduce){#splash-start{animation:none!important}#splash::before{animation:none!important}}
+#splash.clear::before{animation:none!important;opacity:0;transition:opacity .25s ease}
 </style>
 </head>
 
@@ -1963,6 +1996,16 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 
 </div>
 
+
+
+<!-- START 화면 + 블록 전환 연출 -->
+<div id="splash" role="dialog" aria-label="EX:MAZE">
+    <canvas id="splash-canvas"></canvas>
+    <div id="splash-logo-bg"></div>
+    <div id="splash-logo" aria-hidden="true"></div>
+    <div id="splash-flash"></div>
+    <button id="splash-start" type="button">START</button>
+</div>
 
 <script>
 
@@ -4265,6 +4308,306 @@ window.addEventListener(
       if(s && s.rangeCount) s.removeAllRanges();
     }
   }, {passive:true});
+})();
+</script>
+
+<script>
+/* =========================================================
+   START 화면 → 로비 전환 연출 (블록 낙하 → 번쩍 + 띠링 → EX:MAZE 로고 이동)
+   숫자만 바꿔서 속도/분위기를 조절할 수 있음
+========================================================= */
+(function(){
+    const splash = document.getElementById('splash');
+    if (!splash) return;
+
+    const TUNE = {
+        fillSec: 1.7,      // 블록이 화면을 다 채우는 데 걸리는 시간(초). 작을수록 빠름
+        logoHoldSec: 2.2,  // 배경이 드러난 뒤 로고가 네온처럼 켜지고 머무는 시간(초)
+        breakSec: 1.1,     // 블록이 무너지며 로비가 나타나는 시간(초)
+        gravity: 5200,     // 블록 낙하 가속도
+        volume: 1.0,       // 블록 쌓일 때 효과음(코드로 합성) 크기 배율 (0이면 무음)
+        dingFile: 'effect2.mp3', // ★ 번쩍일 때 나는 "띠링" 소리 파일 (index.html과 같은 폴더에 넣으세요)
+        dingVolume: 1.0    // 띠링 소리 크기 (0~1)
+    };
+
+    const btn = document.getElementById('splash-start');
+    const cv = document.getElementById('splash-canvas');
+    const ctx = cv.getContext('2d');
+    const flashEl = document.getElementById('splash-flash');
+    const logo = document.getElementById('splash-logo');
+    const logoBg = document.getElementById('splash-logo-bg');
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let started = false, finished = false, raf = 0;
+    let W = 0, H = 0, DPR = 1, size = 56, cols = 0, rows = 0;
+    let blocks = [], particles = [];
+    let t0 = 0, maxLand = 0, litAt = null, breakAt = null, lastNow = 0;
+
+    /* ---------- 소리 (WebAudio 합성: 별도 파일 필요 없음) ---------- */
+    let ac = null;
+    function getAC(){
+        try{
+            if (!ac){ const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
+            if (ac && ac.state === 'suspended') ac.resume();
+        }catch(e){ ac = null; }
+        return ac;
+    }
+    function tone(t, f, dur, gain, type){
+        if (!ac || TUNE.volume <= 0) return;
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(f, t);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * TUNE.volume), t + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(ac.destination);
+        o.start(t); o.stop(t + dur + 0.03);
+    }
+    function noise(t, dur, gain, f0, f1){
+        if (!ac || TUNE.volume <= 0) return;
+        const n = Math.floor(ac.sampleRate * dur), buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+        const s = ac.createBufferSource(); s.buffer = buf;
+        const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9;
+        bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
+        const g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * TUNE.volume), t + dur * 0.3);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        s.connect(bp); bp.connect(g); g.connect(ac.destination);
+        s.start(t); s.stop(t + dur + 0.02);
+    }
+    function cascadeSound(t, dur){          // 블록이 촤라락 쌓이는 소리: 오르는 펜타토닉 블립
+        const scale = [0, 2, 4, 7, 9], n = Math.floor(dur / 0.03);
+        for (let i = 0; i < n; i++){
+            const k = Math.floor(i * 15 / n);
+            const semi = scale[k % 5] + 12 * Math.floor(k / 5);
+            tone(t + i * 0.03, 330 * Math.pow(2, semi / 12), 0.07, 0.05, 'triangle');
+        }
+    }
+    /* 띠링 소리: effect2.mp3 파일을 재생 (파일이 없으면 이 소리만 조용히 생략됨) */
+    const dingAudio = new Audio(TUNE.dingFile);
+    dingAudio.preload = 'auto';
+    dingAudio.volume = Math.max(0, Math.min(1, TUNE.dingVolume));
+    function primeDing(){                    // START 클릭 때 미리 한 번 열어 둬서 나중에 막히지 않게 함
+        try{
+            dingAudio.muted = true;
+            const p = dingAudio.play();
+            if (p && p.then) p.then(() => { dingAudio.pause(); dingAudio.currentTime = 0; dingAudio.muted = false; })
+                              .catch(() => { dingAudio.muted = false; });
+        }catch(e){ dingAudio.muted = false; }
+    }
+    function playDing(){
+        try{
+            dingAudio.muted = false; dingAudio.currentTime = 0;
+            const p = dingAudio.play();
+            if (p && p.catch) p.catch(() => {});
+        }catch(e){}
+    }
+    function boom(t){
+        if (!ac || TUNE.volume <= 0) return;
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.28 * TUNE.volume, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.5);
+    }
+
+    /* ---------- 캔버스 / 블록 ---------- */
+    const PALETTE = ['#0b3d6e','#0e5a99','#0f6fb8','#1189d6','#00aaff','#1fd1ff','#0a2f57','#7be8ff'];
+    function layout(){
+        DPR = Math.min(2, window.devicePixelRatio || 1);
+        W = window.innerWidth; H = window.innerHeight;
+        cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        size = Math.max(44, Math.min(72, Math.round(Math.min(W, H) / 11)));
+        cols = Math.ceil(W / size); rows = Math.ceil(H / size);
+    }
+    function buildBlocks(){
+        blocks = [];
+        const g = TUNE.gravity;
+        const tfMax = Math.sqrt(2 * (rows * size + size) / g);
+        const base = tfMax + 0.05;
+        const rowStep = TUNE.fillSec / rows;
+        const jit = rowStep * 0.6;
+        maxLand = 0;
+        for (let r = 0; r < rows; r++){
+            const k = rows - 1 - r;                         // 아래 줄부터 쌓임
+            for (let c = 0; c < cols; c++){
+                const rest = r * size;
+                const tf = Math.sqrt(2 * (rest + size) / g);
+                const land = base + k * rowStep + Math.random() * jit;
+                const gold = Math.random() < 0.03;
+                blocks.push({
+                    c, r, x: c * size, rest, tf, ts: land - tf, land,
+                    color: gold ? '#ffd65a' : PALETTE[Math.floor(Math.random() * PALETTE.length)],
+                    bd: r * 0.03 + Math.random() * 0.18,     // (예전 방식용, 지금은 사용 안 함)
+                    dd: Math.hypot((c + 0.5) - cols / 2, (r + 0.5) - rows / 2) / Math.hypot(cols / 2, rows / 2) * 0.55 + Math.random() * 0.06  // 가운데서 바깥으로 걷힘
+                });
+                if (land > maxLand) maxLand = land;
+            }
+        }
+    }
+    function drawBlock(x, y, s, color, boost){
+        ctx.fillStyle = color; ctx.fillRect(x, y, s + 0.5, s + 0.5);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(x + 2, y + 2, s - 4, 3); ctx.fillRect(x + 2, y + 2, 3, s - 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(x + 2, y + s - 5, s - 4, 3); ctx.fillRect(x + s - 5, y + 2, 3, s - 4);
+        ctx.strokeStyle = 'rgba(2,10,20,0.9)'; ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 0.75, y + 0.75, s - 1.5, s - 1.5);
+        if (boost > 0.01){ ctx.fillStyle = 'rgba(205,248,255,' + boost.toFixed(3) + ')'; ctx.fillRect(x, y, s, s); }
+    }
+    function spawnSparks(){
+        const cx = W / 2, cy = H / 2, cols2 = ['#ffffff', '#9eeaff', '#ffd65a', '#55d9ff'];
+        for (let i = 0; i < 110; i++){
+            const a = Math.random() * Math.PI * 2, sp = 250 + Math.random() * 850;
+            particles.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.7 + Math.random() * 0.8,
+                s: 2 + Math.random() * 4, c: cols2[Math.floor(Math.random() * cols2.length)] });
+        }
+    }
+
+    /* ---------- 로고 ---------- */
+    function buildLogo(){
+        logo.innerHTML = ['E','X',':','M','A','Z','E'].map((ch, i) =>
+            '<span class="splash-letter' + (ch === ':' ? ' colon' : '') + '" style="--i:' + i + '">' + ch + '</span>').join('');
+        logo.style.transition = 'none';
+        const w = logo.offsetWidth, h = logo.offsetHeight;
+        logo.style.transform = 'translate(' + Math.round((W - w) / 2) + 'px,' + Math.round((H - h) / 2) + 'px) scale(1)';
+    }
+    function flyLogoToLobby(){
+        const target = document.querySelector('#start-modal .festival-title');
+        const w = logo.offsetWidth;
+        if (!target || !w){ logo.style.transition = 'opacity .5s'; logo.style.opacity = 0; return; }
+        const r = target.getBoundingClientRect();
+        if (!r.width){ logo.style.transition = 'opacity .5s'; logo.style.opacity = 0; return; }
+        const s = r.width / w;
+        void logo.offsetWidth;
+        logo.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1), opacity .35s ease .75s';
+        logo.style.transform = 'translate(' + Math.round(r.left) + 'px,' + Math.round(r.top) + 'px) scale(' + s + ')';
+        logo.style.opacity = 0;
+    }
+    function restartLobbyArrive(){
+        const p = document.querySelector('#start-modal .festival-start-panel');
+        if (!p) return;
+        p.style.animation = 'none'; void p.offsetWidth; p.style.animation = '';
+    }
+
+    /* ---------- 진행 ---------- */
+    function lit(now){
+        litAt = now;
+        splash.classList.add('revealed');
+        flashEl.classList.add('go');
+        logoBg.classList.add('on');
+        logo.classList.add('show'); logo.style.opacity = 1;
+        spawnSparks();
+        if (ac) boom(ac.currentTime + 0.02);
+        playDing();
+    }
+    function startBreak(now){
+        breakAt = now;
+        logoBg.classList.remove('on');
+        splash.style.background = 'transparent';
+        splash.classList.add('clear');
+        flyLogoToLobby();
+        restartLobbyArrive();
+        if (ac) noise(ac.currentTime + 0.02, 0.8, 0.14, 500, 4000);
+    }
+    function finish(){
+        if (finished) return;
+        finished = true;
+        cancelAnimationFrame(raf);
+        document.removeEventListener('keydown', onKey, true);
+        window.removeEventListener('resize', onResize);
+        splash.remove();
+        const input = document.getElementById('festival-player-name');
+        if (input && !('ontouchstart' in window)) { try { input.focus({ preventScroll: true }); } catch(e){} }
+    }
+
+    function frame(ts){
+        const now = (ts - t0) / 1000;
+        const dt = Math.min(0.05, Math.max(0, (ts - lastNow) / 1000)); lastNow = ts;
+        const g = TUNE.gravity;
+        ctx.clearRect(0, 0, W, H);
+
+        for (let i = 0; i < blocks.length; i++){
+            const b = blocks[i];
+            if (litAt !== null){
+                // 화면이 가득 찬 순간: 블록이 가운데부터 작아지며 걷히고 배경이 드러남
+                const p = Math.min(1, Math.max(0, (now - litAt - b.dd) / 0.3));
+                if (p >= 1) continue;
+                const sz = size * (1 - p);
+                if (sz < 6) continue;
+                const off = (size - sz) / 2;
+                ctx.globalAlpha = 1 - p * 0.9;
+                drawBlock(b.x + off, b.rest + off, sz, b.color, p * 0.5);
+                ctx.globalAlpha = 1;
+                continue;
+            }
+            const tl = now - b.ts;
+            if (tl < 0) continue;
+            let y;
+            if (tl < b.tf) y = -size + 0.5 * g * tl * tl;
+            else {
+                const tb2 = tl - b.tf;
+                y = b.rest - (tb2 < 0.22 ? size * 0.09 * Math.sin(Math.PI * tb2 / 0.22) * (1 - tb2 / 0.22) : 0);
+            }
+            drawBlock(b.x, y, size, b.color, 0);
+        }
+
+        // 반짝이 파티클
+        if (particles.length){
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = particles.length - 1; i >= 0; i--){
+                const p = particles[i];
+                p.life += dt; if (p.life >= p.max){ particles.splice(i, 1); continue; }
+                p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985; p.vy *= 0.985;
+                const a = 1 - p.life / p.max;
+                ctx.globalAlpha = a; ctx.fillStyle = p.c;
+                ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
+                ctx.fillRect(p.x - p.s * 1.6, p.y - 0.5, p.s * 3.2, 1);
+                ctx.fillRect(p.x - 0.5, p.y - p.s * 1.6, 1, p.s * 3.2);
+            }
+            ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+        }
+
+        if (litAt === null && now >= maxLand + 0.15) lit(now);
+        else if (litAt !== null && breakAt === null && now >= litAt + TUNE.logoHoldSec) startBreak(now);
+        else if (breakAt !== null && now >= breakAt + TUNE.breakSec) { finish(); return; }
+
+        raf = requestAnimationFrame(frame);
+    }
+
+    function begin(){
+        if (started) return;
+        started = true;
+        splash.classList.add('going');
+        if (reduce){
+            splash.classList.add('fade-out');
+            setTimeout(finish, 420);
+            return;
+        }
+        getAC();
+        primeDing();
+        layout(); buildBlocks(); buildLogo();
+        const startDelay = 0.3;
+        if (ac) cascadeSound(ac.currentTime + startDelay, Math.min(Math.max(maxLand - 0.1, 1), 3.2));
+        t0 = performance.now() - (-startDelay * 1000);   // 버튼이 사라진 뒤 블록이 떨어지기 시작
+        lastNow = performance.now();
+        raf = requestAnimationFrame(frame);
+    }
+    function onKey(e){
+        if (!started && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); e.stopPropagation(); begin(); }
+    }
+    function onResize(){ if (!started) layout(); }
+
+    layout();
+    btn.addEventListener('click', begin);
+    document.addEventListener('keydown', onKey, true);
+    window.addEventListener('resize', onResize);
+    try { btn.focus({ preventScroll: true }); } catch(e){}
 })();
 </script>
 
