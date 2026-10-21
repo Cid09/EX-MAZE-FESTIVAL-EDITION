@@ -3745,24 +3745,43 @@ function renderLoop() {
     // Stop camera transform before screen-space lighting and fog overlays.
     ctx.restore();
 
-    /* DARKNESS SUPPORT */
+    /* DARKNESS SUPPORT: 플레이어 주변만 밝게, 나머지는 어둡지만 길은 희미하게 보이게 */
     if (selectedSupports.has('darkness') || specialActive('darkness')) {
         const pX = (player.x - camera.x) * cSize + cSize / 2;
         const pY = (player.y - camera.y) * cSize + cSize / 2;
-        // 어둠 강도(DARK_ALPHA: 0=안 어두움, 1=완전 암흑)와 밝게 보이는 반경(DARK_RADIUS: 칸 단위)
-        const DARK_ALPHA = 0.30, DARK_RADIUS = 6.5;
-        ctx.fillStyle = 'rgba(0,0,0,' + DARK_ALPHA + ')';
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+        // ▼ 여기 숫자만 바꾸면 밝기를 조절할 수 있음
+        const DARK_ALPHA  = 0.50; // 밝은 영역 밖의 어둡기 (0=안 어두움, 1=완전 암흑)
+        const DARK_RADIUS = 5.5;  // 밝게 비추는 반경 (칸 단위)
+        const DARK_CLEAR  = 0.55; // 반경의 이 비율까지는 완전히 밝음 (그 바깥은 서서히 어두워짐)
+        const PATH_HINT   = 0.12; // 어두운 곳에서 길(통로)이 희미하게 보이는 정도 (0이면 안 보임)
+
+        ctx.fillStyle = 'rgba(0,3,8,' + DARK_ALPHA + ')';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         ctx.globalCompositeOperation = 'destination-out';
-        const grad = ctx.createRadialGradient(pX,pY,0,pX,pY,cSize*DARK_RADIUS);
-        grad.addColorStop(0,'rgba(0,0,0,1)');
-        grad.addColorStop(0.7,'rgba(0,0,0,0.85)');
-        grad.addColorStop(1,'rgba(0,0,0,0)');
+        const grad = ctx.createRadialGradient(pX, pY, 0, pX, pY, cSize * DARK_RADIUS);
+        grad.addColorStop(0, 'rgba(0,0,0,1)');
+        grad.addColorStop(DARK_CLEAR, 'rgba(0,0,0,1)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(pX,pY,cSize*DARK_RADIUS,0,Math.PI*2);
+        ctx.arc(pX, pY, cSize * DARK_RADIUS, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
+
+        // 통로 칸에 옅은 청록빛을 얹어서 벽과 길이 구분되게 함
+        ctx.fillStyle = 'rgba(110,230,240,' + PATH_HINT + ')';
+        const x0 = Math.max(0, Math.floor(camera.x) - 1);
+        const x1 = Math.min(gSize - 1, Math.ceil(camera.x + viewCells) + 1);
+        const y0 = Math.max(0, Math.floor(camera.y) - 1);
+        const y1 = Math.min(gSize - 1, Math.ceil(camera.y + viewCells) + 1);
+        for (let y = y0; y <= y1; y++) {
+            for (let x = x0; x <= x1; x++) {
+                if (maze[y][x] === 0) {
+                    ctx.fillRect((x - camera.x) * cSize, (y - camera.y) * cSize, cSize + 0.5, cSize + 0.5);
+                }
+            }
+        }
     }
 
     /* 안개 */
