@@ -1508,12 +1508,12 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 .festival-start-btn{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:17px 20px;border:1px solid #ffe17a;border-radius:10px;background:linear-gradient(100deg,#ffd65a,#ffed9b 55%,#ffca3b);color:#111b22;font-size:17px;letter-spacing:.12em;box-shadow:0 0 25px #ffd65a30,0 8px 20px #0005}
 .festival-start-btn b{display:grid;place-items:center;width:29px;height:29px;border-radius:7px;background:#1b2931;color:#ffe27b;font-size:18px}
 .entry-hint{margin:12px 0 0;color:#648196;font-size:10px;text-align:center}.entry-hint span{color:#ffd65a;margin-right:5px}
-.festival-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:23px;padding-top:17px;border-top:1px solid rgba(100,165,197,.15)}
-.festival-secondary-actions .lobby-nav-btn{padding:11px 7px;font-size:9px;letter-spacing:.07em}
+.festival-secondary-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:23px;padding-top:17px;border-top:1px solid rgba(100,165,197,.15)}
+.festival-secondary-actions .lobby-nav-btn{padding:14px 7px;font-size:11px;letter-spacing:.12em}
 .festival-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:16px;border-top:1px solid rgba(106,182,219,.14);color:#3f5d70;font-size:8px;font-weight:900;letter-spacing:.13em}
 @media(min-width:1000px) and (min-height:700px){.festival-start-panel{max-height:92vh}.festival-hero-grid{min-height:430px}}
 @media(max-width:760px){#start-modal{justify-content:flex-start;padding:10px}.festival-start-panel{width:100%;max-height:none;padding:18px;border-radius:16px}.festival-hero-grid{grid-template-columns:1fr;gap:26px;padding:26px 0 20px}.festival-title{font-size:clamp(58px,16vw,94px)}.festival-hero-copy h1{font-size:clamp(25px,6vw,34px)}.festival-entry-card{padding:21px}.festival-footer{font-size:7px}.festival-stat-row{grid-template-columns:repeat(3,minmax(0,1fr));max-width:360px}}
-@media(max-width:420px){.festival-topline{font-size:9px}.system-pill{font-size:8px}.festival-title{font-size:55px}.festival-secondary-actions{grid-template-columns:1fr 1fr}.festival-stat-row b{font-size:21px}.festival-live-note{font-size:8px}}
+@media(max-width:420px){.festival-topline{font-size:9px}.system-pill{font-size:8px}.festival-title{font-size:55px}.festival-secondary-actions{grid-template-columns:1fr}.festival-stat-row b{font-size:21px}.festival-live-note{font-size:8px}}
 @media(prefers-reduced-motion:reduce){#start-modal::before,#start-modal::after,.system-pill i,.live-dot{animation:none!important}}
 
 /* EXTRA FESTIVAL SHOWCASE ANIMATIONS */
@@ -1588,6 +1588,21 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 #splash-skip:hover{background:rgba(20,70,120,.8);transform:translateY(-2px)}
 #splash-skip:focus-visible{outline:3px solid #ffd65a;outline-offset:4px}
 #splash.fade-out #splash-skip,#splash.clear #splash-skip{opacity:0;pointer-events:none;transition:opacity .2s ease}
+#splash-bar-t,#splash-bar-b{position:absolute;left:0;right:0;height:8vh;background:#000;z-index:2;pointer-events:none;transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+#splash-bar-t{top:0;transform:translateY(-101%)}
+#splash-bar-b{bottom:0;transform:translateY(101%)}
+#splash.cine #splash-bar-t,#splash.cine #splash-bar-b{transform:translateY(0)}
+#splash-logo.glitch{animation:splashGlitch .75s steps(1,end) 1}
+@keyframes splashGlitch{
+ 0%{translate:-14px 0;filter:drop-shadow(-9px 0 rgba(255,40,110,.95)) drop-shadow(9px 0 rgba(0,229,255,.95))}
+ 10%{translate:12px 3px;filter:drop-shadow(7px 0 rgba(255,40,110,.95)) drop-shadow(-7px 0 rgba(0,229,255,.95))}
+ 20%{translate:-6px -4px;filter:drop-shadow(-12px 0 rgba(255,40,110,.9)) drop-shadow(12px 0 rgba(0,229,255,.9))}
+ 32%{translate:9px 0;filter:drop-shadow(5px 0 rgba(255,40,110,.8)) drop-shadow(-5px 0 rgba(0,229,255,.8))}
+ 45%{translate:-4px 2px;filter:drop-shadow(-4px 0 rgba(255,40,110,.7)) drop-shadow(4px 0 rgba(0,229,255,.7))}
+ 60%{translate:3px 0;filter:drop-shadow(3px 0 rgba(255,40,110,.55)) drop-shadow(-3px 0 rgba(0,229,255,.55))}
+ 78%{translate:-2px 0;filter:drop-shadow(-2px 0 rgba(255,40,110,.4)) drop-shadow(2px 0 rgba(0,229,255,.4))}
+ 100%{translate:0 0;filter:none}
+}
 </style>
 </head>
 
@@ -1732,9 +1747,6 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
                 <div class="entry-hint"><span>▶</span> START를 누르면 타이머가 시작됩니다.</div>
                 <div class="festival-secondary-actions">
                   <button class="lobby-nav-btn" onclick="openLeaderboard()">🏆 LEADERBOARD</button>
-                  <button class="lobby-nav-btn" onclick="openStageSelect()">▦ STAGE SELECT</button>
-                  <button class="lobby-nav-btn" onclick="openRecords()">◷ RECORDS</button>
-                  <button class="lobby-nav-btn" onclick="openPlayConfig()">⚙ MODE SETTINGS</button>
                 </div>
               </section>
             </div>
@@ -2007,6 +2019,8 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 <!-- START 화면 + 블록 전환 연출 -->
 <div id="splash" role="dialog" aria-label="EX:MAZE">
     <canvas id="splash-canvas"></canvas>
+    <div id="splash-bar-t"></div>
+    <div id="splash-bar-b"></div>
     <div id="splash-logo-bg"></div>
     <div id="splash-logo" aria-hidden="true"></div>
     <div id="splash-flash"></div>
@@ -4329,19 +4343,20 @@ window.addEventListener(
 
 <script>
 /* =========================================================
-   인트로: START → 블록 낙하 → 번쩍 → 블록 걷힘 → 미로 길 + 빛 달리기 → 도착(띠링) → EX:MAZE 로고 → 로비
-   숫자만 바꿔서 속도/분위기를 조절할 수 있음. 도중에 SKIP 버튼(또는 Esc/Enter/Space)으로 건너뛰기 가능
+   인트로 (약 8초): START → 블록이 쌓이며 화면을 채움 → 번쩍 → 길 부분만 녹아 사라지며 네온 "블록 미로" 완성
+   → 카메라가 빛을 따라 달림(벽이 반응, 막다른 길에서 불꽃) → 출구 도착(띠링) + 정답 길 공개 → EX:MAZE 로고 → 로비
+   SKIP 버튼(또는 Esc/Enter/Space)으로 건너뛰기
+   숫자만 바꿔서 속도를 조절할 수 있음 (전체 합이 9초를 넘지 않게 유지하세요)
 ========================================================= */
 (function(){
     const splash = document.getElementById('splash');
     if (!splash) return;
 
     const TUNE = {
-        fillSec: 1.7,         // 블록이 화면을 다 채우는 데 걸리는 시간(초). 작을수록 빠름
-        mazeRevealSec: 1.1,   // 미로 선이 퍼져 나가며 그려지는 시간(초)
-        mazeSec: 3.0,         // 빛이 미로를 달리는 시간(초). 길을 헤매는 길이에 따라 속도가 자동 조절됨
-        logoHoldSec: 2.0,     // 도착 후 EX:MAZE 로고가 네온처럼 켜지고 머무는 시간(초)
-        breakSec: 1.1,        // 로비가 나타나는 시간(초)
+        fillSec: 1.5,         // 블록이 화면을 다 채우는 데 걸리는 시간(초)
+        mazeSec: 2.6,         // 빛이 미로를 달리는 시간(초). 길을 헤매는 길이에 따라 속도가 자동 조절됨
+        logoHoldSec: 1.5,     // 도착 후 EX:MAZE 로고가 네온처럼 켜지고 머무는 시간(초)
+        breakSec: 1.0,        // 블록이 무너지며 로비가 나타나는 시간(초)
         gravity: 5200,        // 블록 낙하 가속도
         volume: 1.0,          // 코드로 합성한 효과음(쌓이는 소리 등) 크기 배율 (0이면 무음)
         dingFile: 'effect2.mp3', // ★ 미로 출구에 도착할 때 나는 "띠링" 소리 파일 (index.html과 같은 폴더에 넣으세요)
@@ -4358,12 +4373,15 @@ window.addEventListener(
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let started = false, finished = false, skipping = false, raf = 0, startedAtMs = 0;
-    let W = 0, H = 0, DPR = 1, size = 56, cols = 0, rows = 0;
-    let blocks = [], particles = [];
+    let W = 0, H = 0, DPR = 1, size = 48;
+    let blocks = [], pathCells = [], particles = [];
     let t0 = 0, maxLand = 0, lastNow = 0;
-    let clearAt = null, mazeAt = null, dotStart = null, dotEnd = 0, arriveAt = null, breakAt = null;
-    // 미로 연출용
-    let mz = null;   // { cs, ox, oy, gw, gh, route, speed, cv, sx, sy, ex, ey, maxR }
+    let clearAt = null, dotStart = null, dotEnd = 0, arriveAt = null, breakAt = null;
+    let mz = null;   // { ox, oy, gw, gh, route, speed, sol, deadEnds }
+    let wallSprites = {};          // 색상별 네온 벽 타일(미리 그려 둠)
+    let camX = 0, camY = 0;        // 카메라 중심(빛을 따라감)
+    let shakeAmp = 0;              // 화면 흔들림 세기 (자동으로 줄어듦)
+    let rings = [];                // 충격파 링
 
     /* ---------- 소리 (WebAudio 합성 + 띠링은 mp3 파일) ---------- */
     let ac = null, master = null;
@@ -4420,6 +4438,44 @@ window.addEventListener(
         g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
         o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.5);
     }
+    function riserNoise(t, dur, gain){      // 점점 올라가는 긴장감 소리 (번쩍이는 순간에 맞춰 최고조)
+        if (!ac || TUNE.volume <= 0) return;
+        const n = Math.floor(ac.sampleRate * dur), buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+        const s = ac.createBufferSource(); s.buffer = buf;
+        const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
+        bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(7000, t + dur);
+        const g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * TUNE.volume), t + dur * 0.96);
+        g.gain.linearRampToValueAtTime(0.0001, t + dur);
+        s.connect(bp); bp.connect(g); g.connect(master);
+        s.start(t); s.stop(t + dur + 0.02);
+    }
+    function swell(t, dur, freqs, gain){    // 도착 직전에 부풀어 오르는 화음
+        if (!ac || TUNE.volume <= 0) return;
+        freqs.forEach((f, k) => {
+            const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();
+            o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t); o.detune.setValueAtTime(k * 4 - 4, t);
+            lp.type = 'lowpass'; lp.frequency.setValueAtTime(400, t); lp.frequency.exponentialRampToValueAtTime(3200, t + dur);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * TUNE.volume), t + dur);
+            g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.04);
+            o.connect(lp); lp.connect(g); g.connect(master);
+            o.start(t); o.stop(t + dur + 0.08);
+        });
+    }
+    function impact(t, big){                // 묵직한 충격음: 저음 + 노이즈 폭발
+        if (!ac || TUNE.volume <= 0) return;
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(big ? 120 : 100, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.55);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime((big ? 0.42 : 0.34) * TUNE.volume, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.75);
+        noise(t, 0.5, big ? 0.22 : 0.16, 6000, 300);
+    }
     /* 띠링 소리: effect2.mp3 파일을 재생 (파일이 없으면 이 소리만 조용히 생략됨) */
     const dingAudio = new Audio(TUNE.dingFile);
     dingAudio.preload = 'auto';
@@ -4440,67 +4496,7 @@ window.addEventListener(
         }catch(e){}
     }
 
-    /* ---------- 캔버스 / 블록 ---------- */
-    const PALETTE = ['#0b3d6e','#0e5a99','#0f6fb8','#1189d6','#00aaff','#1fd1ff','#0a2f57','#7be8ff'];
-    function layout(){
-        DPR = Math.min(2, window.devicePixelRatio || 1);
-        W = window.innerWidth; H = window.innerHeight;
-        cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-        size = Math.max(44, Math.min(72, Math.round(Math.min(W, H) / 11)));
-        cols = Math.ceil(W / size); rows = Math.ceil(H / size);
-    }
-    function buildBlocks(){
-        blocks = [];
-        const g = TUNE.gravity;
-        const tfMax = Math.sqrt(2 * (rows * size + size) / g);
-        const base = tfMax + 0.05;
-        const rowStep = TUNE.fillSec / rows;
-        const jit = rowStep * 0.6;
-        maxLand = 0;
-        for (let r = 0; r < rows; r++){
-            const k = rows - 1 - r;                         // 아래 줄부터 쌓임
-            for (let c = 0; c < cols; c++){
-                const rest = r * size;
-                const tf = Math.sqrt(2 * (rest + size) / g);
-                const land = base + k * rowStep + Math.random() * jit;
-                const gold = Math.random() < 0.03;
-                blocks.push({
-                    c, r, x: c * size, rest, tf, ts: land - tf, land,
-                    color: gold ? '#ffd65a' : PALETTE[Math.floor(Math.random() * PALETTE.length)],
-                    dd: Math.hypot((c + 0.5) - cols / 2, (r + 0.5) - rows / 2) / Math.hypot(cols / 2, rows / 2) * 0.55 + Math.random() * 0.06  // 가운데서 바깥으로 걷힘
-                });
-                if (land > maxLand) maxLand = land;
-            }
-        }
-    }
-    function drawBlock(x, y, s, color, boost){
-        ctx.fillStyle = color; ctx.fillRect(x, y, s + 0.5, s + 0.5);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(x + 2, y + 2, s - 4, 3); ctx.fillRect(x + 2, y + 2, 3, s - 4);
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.fillRect(x + 2, y + s - 5, s - 4, 3); ctx.fillRect(x + s - 5, y + 2, 3, s - 4);
-        ctx.strokeStyle = 'rgba(2,10,20,0.9)'; ctx.lineWidth = 1.5;
-        ctx.strokeRect(x + 0.75, y + 0.75, s - 1.5, s - 1.5);
-        if (boost > 0.01){ ctx.fillStyle = 'rgba(205,248,255,' + boost.toFixed(3) + ')'; ctx.fillRect(x, y, s, s); }
-    }
-    function spawnSparks(cx, cy){
-        const cs2 = ['#ffffff', '#9eeaff', '#ffd65a', '#55d9ff'];
-        for (let i = 0; i < 110; i++){
-            const a = Math.random() * Math.PI * 2, sp = 250 + Math.random() * 850;
-            particles.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.7 + Math.random() * 0.8,
-                s: 2 + Math.random() * 4, c: cs2[Math.floor(Math.random() * cs2.length)] });
-        }
-    }
-    function doFlash(x, y){
-        flashEl.classList.remove('go');
-        flashEl.style.background = 'radial-gradient(circle at ' + Math.round(x) + 'px ' + Math.round(y) +
-            'px,#fff 0,#c9f6ff 14%,rgba(90,205,255,.55) 40%,transparent 75%)';
-        void flashEl.offsetWidth;
-        flashEl.classList.add('go');
-    }
-
-    /* ---------- 미로 (벽은 네온 선, 빛이 길을 헤매다 출구로) ---------- */
+    /* ---------- 미로 만들기 ---------- */
     function carveMaze(gw, gh){
         const g = Array.from({ length: gh }, () => Array(gw).fill(1));
         const st = [[1, 1]]; g[1][1] = 0;
@@ -4535,105 +4531,254 @@ window.addEventListener(
         }
         return route;
     }
-    function buildMaze(){
-        const cs = Math.max(28, Math.min(52, Math.round(Math.min(W, H) / 16)));
-        let gw = Math.floor(W / cs), gh = Math.floor(H / cs);
+    function bfsDist(g, gw, gh){            // 입구에서 각 길 칸까지의 거리 (길이 열리는 순서에 사용)
+        const d = Array.from({ length: gh }, () => Array(gw).fill(-1));
+        const par = Array.from({ length: gh }, () => Array(gw).fill(null));
+        const q = [[1, 1]]; d[1][1] = 0; let max = 0;
+        for (let i = 0; i < q.length; i++){
+            const [x, y] = q[i];
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){
+                const nx = x + dx, ny = y + dy;
+                if (g[ny] && g[ny][nx] === 0 && d[ny][nx] < 0){
+                    d[ny][nx] = d[y][x] + 1; par[ny][nx] = [x, y];
+                    if (d[ny][nx] > max) max = d[ny][nx]; q.push([nx, ny]);
+                }
+            }
+        }
+        const sol = []; let cur = [gw - 2, gh - 2];            // 입구→출구 정답 경로
+        while (cur){ sol.push(cur); cur = par[cur[1]][cur[0]]; }
+        sol.reverse();
+        return { d, max: Math.max(1, max), sol };
+    }
+
+    /* ---------- 장면 만들기: 화면 전체를 블록 격자로 덮고, 그 격자가 곧 미로 ---------- */
+    const PALETTE = ['#0b3d6e','#0e5a99','#0f6fb8','#1189d6','#00aaff','#1fd1ff','#0a2f57','#7be8ff'];
+    function layout(){
+        DPR = Math.min(2, window.devicePixelRatio || 1);
+        W = window.innerWidth; H = window.innerHeight;
+        cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    function buildScene(){
+        size = Math.max(32, Math.min(64, Math.round(Math.min(W, H) / 14)));
+        let gw = Math.floor(W / size), gh = Math.floor(H / size);
         if (gw % 2 === 0) gw--; if (gh % 2 === 0) gh--;
         gw = Math.max(9, gw); gh = Math.max(9, gh);
-        const ox = (W - gw * cs) / 2, oy = (H - gh * cs) / 2;
+        const ox = (W - gw * size) / 2, oy = (H - gh * size) / 2;
         const g = carveMaze(gw, gh);
+
         let route = null;
-        const targetLen = TUNE.mazeSec * 70;               // 막다른 길 구경도 하되 너무 길지 않은 경로를 고름
-        for (let i = 0; i < 12; i++){
+        const targetLen = TUNE.mazeSec * 60;                 // 막다른 길 구경도 하되 너무 길지 않은 경로를 고름
+        for (let i = 0; i < 16; i++){
             const r = explore(g, gw, gh);
+            if (r.length > 300) continue;
             if (!route || Math.abs(r.length - targetLen) < Math.abs(route.length - targetLen)) route = r;
         }
-        const speed = Math.max(45, Math.min(130, (route.length - 1) / TUNE.mazeSec));
-
-        const mcv = document.createElement('canvas');
-        mcv.width = Math.floor(W * DPR); mcv.height = Math.floor(H * DPR);
-        const m = mcv.getContext('2d');
-        m.setTransform(DPR, 0, 0, DPR, 0, 0);
-        m.shadowColor = 'rgba(60,200,255,0.9)'; m.shadowBlur = 10;
-        m.fillStyle = 'rgba(8,40,80,0.85)'; m.strokeStyle = 'rgba(120,225,255,0.95)'; m.lineWidth = 1.5;
-        for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++){
-            if (g[y][x] !== 1) continue;
-            const px = ox + x * cs + 2, py = oy + y * cs + 2, s = cs - 4;
-            m.fillRect(px, py, s, s); m.strokeRect(px, py, s, s);
+        if (!route) route = explore(g, gw, gh);
+        const speed = Math.max(35, Math.min(120, (route.length - 1) / TUNE.mazeSec));
+        const deadEnds = [];                                   // 빛이 막다른 길에서 되돌아 나오는 지점
+        for (let i = 1; i < route.length - 1; i++)
+            if (route[i - 1][0] === route[i + 1][0] && route[i - 1][1] === route[i + 1][1]) deadEnds.push({ i, fired: false });
+        const bd = bfsDist(g, gw, gh);
+        mz = { ox, oy, gw, gh, route, speed, sol: bd.sol, deadEnds };
+        camX = W / 2; camY = H / 2;
+        makeWallSprites();
+        const mx = Math.ceil(ox / size), my = Math.ceil(oy / size);   // 미로 바깥 여백까지 블록으로 덮기
+        const rowsTot = gh + 2 * my;
+        const grav = TUNE.gravity;
+        const tfMax = Math.sqrt(2 * (H + 2 * size) / grav);
+        const base = tfMax + 0.05;
+        const rowStep = TUNE.fillSec / rowsTot, jit = rowStep * 0.6;
+        blocks = []; pathCells = []; maxLand = 0;
+        for (let cy = -my; cy < gh + my; cy++){
+            const k = (gh - 1 + my) - cy;                      // 아래 줄부터 쌓임
+            for (let cx = -mx; cx < gw + mx; cx++){
+                const inside = cx >= 0 && cx < gw && cy >= 0 && cy < gh;
+                const type = !inside ? 'margin' : (g[cy][cx] === 1 ? 'wall' : 'path');
+                const x = ox + cx * size, rest = oy + cy * size;
+                const tf = Math.sqrt(2 * (rest + size) / grav);
+                const land = base + k * rowStep + Math.random() * jit;
+                const gold = Math.random() < 0.03;
+                const dd = type === 'path' ? (bd.d[cy][cx] / bd.max) * 0.85 + Math.random() * 0.03
+                         : type === 'margin' ? 0.1 + Math.random() * 0.6 : 0;
+                blocks.push({
+                    type, cx, cy, x, rest, tf, ts: land - tf, land, dd,
+                    bd: ((cy + my) / rowsTot) * 0.35 + Math.random() * 0.12,   // 무너질 때 위쪽부터
+                    color: gold ? '#ffd65a' : PALETTE[Math.floor(Math.random() * PALETTE.length)]
+                });
+                if (type === 'path') pathCells.push(blocks[blocks.length - 1]);
+                if (land > maxLand) maxLand = land;
+            }
         }
-        mz = {
-            cs, ox, oy, gw, gh, route, speed, cv: mcv,
-            sx: ox + 1.5 * cs, sy: oy + 1.5 * cs,
-            ex: ox + (gw - 1.5) * cs, ey: oy + (gh - 1.5) * cs,
-            maxR: Math.hypot(W, H)
-        };
     }
-    function cellPx(cx, cy){ return [mz.ox + (cx + 0.5) * mz.cs, mz.oy + (cy + 0.5) * mz.cs]; }
-
-    function drawMaze(now){
-        let alpha = 1;
-        if (arriveAt !== null && breakAt === null) alpha = 1 - 0.7 * Math.min(1, (now - arriveAt) / 0.5);
-        if (breakAt !== null) alpha = 0.3 * (1 - Math.min(1, (now - breakAt) / (TUNE.breakSec * 0.8)));
-        if (alpha <= 0.01) return;
-        const rt = Math.min(1, Math.max(0, (now - mazeAt) / TUNE.mazeRevealSec));
-        const R = (1 - Math.pow(1 - rt, 2)) * mz.maxR;
-
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.beginPath(); ctx.arc(mz.sx, mz.sy, R, 0, Math.PI * 2); ctx.clip();
-        ctx.drawImage(mz.cv, 0, 0, W, H);
-        ctx.restore();
-
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        if (rt < 1){                                         // 퍼져 나가는 빛의 테두리
-            ctx.strokeStyle = 'rgba(150,235,255,' + (0.55 * (1 - rt)).toFixed(3) + ')'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.arc(mz.sx, mz.sy, R, 0, Math.PI * 2); ctx.stroke();
+    function drawBlock(x, y, s, color, boost){
+        ctx.fillStyle = color; ctx.fillRect(x, y, s + 0.5, s + 0.5);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(x + 2, y + 2, s - 4, 3); ctx.fillRect(x + 2, y + 2, 3, s - 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(x + 2, y + s - 5, s - 4, 3); ctx.fillRect(x + s - 5, y + 2, 3, s - 4);
+        ctx.strokeStyle = 'rgba(2,10,20,0.9)'; ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 0.75, y + 0.75, s - 1.5, s - 1.5);
+        if (boost > 0.01){ ctx.fillStyle = 'rgba(205,248,255,' + boost.toFixed(3) + ')'; ctx.fillRect(x, y, s, s); }
+    }
+    const WALL_PAD = 10;
+    function makeWallSprites(){               // 네온 벽 타일을 색상별로 한 번만 그려 두고 재사용 (빛 번짐 포함)
+        wallSprites = {};
+        PALETTE.concat(['#ffd65a']).forEach(color => {
+            const full = size + WALL_PAD * 2;
+            const c = document.createElement('canvas');
+            c.width = Math.ceil(full * DPR); c.height = Math.ceil(full * DPR);
+            const g = c.getContext('2d');
+            g.scale(DPR, DPR);
+            const p = WALL_PAD, s = size;
+            g.shadowColor = 'rgba(70,210,255,0.95)'; g.shadowBlur = 10;
+            g.fillStyle = color; g.fillRect(p + 1, p + 1, s - 2, s - 2);
+            g.shadowBlur = 0;
+            const gr = g.createLinearGradient(p, p, p + s, p + s);
+            gr.addColorStop(0, 'rgba(255,255,255,0.20)'); gr.addColorStop(1, 'rgba(0,0,0,0.35)');
+            g.fillStyle = gr; g.fillRect(p + 1, p + 1, s - 2, s - 2);
+            g.strokeStyle = 'rgba(140,236,255,0.95)'; g.lineWidth = 1.8;
+            g.strokeRect(p + 1.5, p + 1.5, s - 3, s - 3);
+            g.fillStyle = 'rgba(255,255,255,0.16)';
+            g.fillRect(p + 5, p + 5, s - 10, 2); g.fillRect(p + 5, p + 5, 2, s - 10);
+            g.fillStyle = 'rgba(190,245,255,0.38)';
+            g.fillRect(p + s / 2 - 2, p + s / 2 - 2, 4, 4);          // 가운데 리벳
+            wallSprites[color] = c;
+        });
+    }
+    function drawWall(b, y, boost){
+        const sp = wallSprites[b.color];
+        if (sp) ctx.drawImage(sp, b.x - WALL_PAD, y - WALL_PAD, size + WALL_PAD * 2, size + WALL_PAD * 2);
+        else drawBlock(b.x, y, size, b.color, 0);
+        if (boost > 0.01){
+            ctx.fillStyle = 'rgba(190,245,255,' + Math.min(0.7, boost).toFixed(3) + ')';
+            ctx.fillRect(b.x + 1, y + 1, size - 2, size - 2);
         }
-        // 출구 표시 (금색으로 깜빡)
-        const pulse = 0.55 + 0.45 * Math.sin(now * 6);
-        ctx.fillStyle = 'rgba(255,214,90,' + (0.35 + 0.4 * pulse).toFixed(3) + ')';
-        ctx.fillRect(mz.ex - mz.cs * 0.4, mz.ey - mz.cs * 0.4, mz.cs * 0.8, mz.cs * 0.8);
-        ctx.strokeStyle = 'rgba(255,230,140,0.95)'; ctx.lineWidth = 2;
-        ctx.strokeRect(mz.ex - mz.cs * 0.4, mz.ey - mz.cs * 0.4, mz.cs * 0.8, mz.cs * 0.8);
+    }
+    function cellPx(cx, cy){ return [mz.ox + (cx + 0.5) * size, mz.oy + (cy + 0.5) * size]; }
 
-        // 달리는 빛 + 꼬리
-        if (dotStart !== null && now >= dotStart){
-            const route = mz.route, last = route.length - 1;
-            const u = Math.min(last, (now - dotStart) * mz.speed);
-            const i = Math.min(last, Math.floor(u)), f = i >= last ? 0 : u - i;
-            const a = route[i], b = route[Math.min(i + 1, last)];
-            const [px, py] = cellPx(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f);
+    function spawnSparks(cx, cy, n, cols, spMin, spMax){
+        const cs2 = cols || ['#ffffff', '#9eeaff', '#ffd65a', '#55d9ff'];
+        n = n || 110; spMin = spMin || 250; spMax = spMax || 850;
+        for (let i = 0; i < n; i++){
+            const a = Math.random() * Math.PI * 2, sp = spMin + Math.random() * (spMax - spMin);
+            particles.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.5 + Math.random() * 0.7,
+                s: 2 + Math.random() * 4, c: cs2[Math.floor(Math.random() * cs2.length)] });
+        }
+    }
+    function doFlash(x, y){
+        flashEl.classList.remove('go');
+        flashEl.style.background = 'radial-gradient(circle at ' + Math.round(x) + 'px ' + Math.round(y) +
+            'px,#fff 0,#c9f6ff 14%,rgba(90,205,255,.55) 40%,transparent 75%)';
+        void flashEl.offsetWidth;
+        flashEl.classList.add('go');
+    }
 
-            const K = 22;
+    /* 달리는 빛의 현재 위치 */
+    function runnerPos(now){
+        const route = mz.route, last = route.length - 1;
+        const u = Math.min(last, Math.max(0, (now - dotStart) * mz.speed));
+        const i = Math.min(last, Math.floor(u)), f = i >= last ? 0 : u - i;
+        const a = route[i], b = route[Math.min(i + 1, last)];
+        const p = cellPx(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f);
+        return { x: p[0], y: p[1], i, u };
+    }
+    function portal(cx, cy, now, color, glow){   // 입구/출구에서 돌아가는 점선 링
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.strokeStyle = color; ctx.lineWidth = 2.2;
+        ctx.setLineDash([size * 0.18, size * 0.14]);
+        ctx.lineDashOffset = -now * size * 0.9;
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.62, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalCompositeOperation = 'lighter';
+        const pulse = 0.5 + 0.5 * Math.sin(now * 5);
+        const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.9);
+        gr.addColorStop(0, glow.replace('A', (0.55 + 0.3 * pulse).toFixed(2)));
+        gr.addColorStop(1, glow.replace('A', '0'));
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.9, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+    function drawRunner(now, rp){
+        let alpha = 1;
+        if (breakAt !== null) alpha = 1 - Math.min(1, (now - breakAt) / (TUNE.breakSec * 0.6));
+        if (alpha <= 0.01) return;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        const route = mz.route, last = route.length - 1;
+
+        // 입구(청록) / 출구(금색) 포털
+        const [enx, eny] = cellPx(1, 1), [exx, exy] = cellPx(mz.gw - 2, mz.gh - 2);
+        portal(enx, eny, now, 'rgba(120,235,255,0.95)', 'rgba(60,200,255,A)');
+        portal(exx, exy, now, 'rgba(255,225,130,0.98)', 'rgba(255,200,70,A)');
+
+        if (rp){
+            // 지나온 길이 은은하게 남음 (탐험 흔적)
             ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.strokeStyle = 'rgba(110,225,255,0.18)'; ctx.lineWidth = size * 0.16;
+            ctx.beginPath();
+            for (let k = 0; k <= rp.i; k++){
+                const p = cellPx(route[k][0], route[k][1]);
+                if (k === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+            }
+            ctx.lineTo(rp.x, rp.y); ctx.stroke();
+
+            // 밝은 꼬리
+            const K = 22;
             let prev = null;
-            for (let k = Math.max(0, i - K); k <= i; k++){
+            for (let k = Math.max(0, rp.i - K); k <= rp.i; k++){
                 const p = cellPx(route[k][0], route[k][1]);
                 if (prev){
-                    const frac = (k - (i - K)) / K;
-                    ctx.strokeStyle = 'rgba(160,240,255,' + (0.08 + 0.55 * Math.max(0, frac)).toFixed(3) + ')';
-                    ctx.lineWidth = mz.cs * (0.08 + 0.2 * Math.max(0, frac));
+                    const frac = Math.max(0, (k - (rp.i - K)) / K);
+                    ctx.strokeStyle = 'rgba(170,242,255,' + (0.10 + 0.6 * frac).toFixed(3) + ')';
+                    ctx.lineWidth = size * (0.08 + 0.22 * frac);
                     ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
                 }
                 prev = p;
             }
             if (prev){
-                ctx.strokeStyle = 'rgba(200,250,255,0.75)'; ctx.lineWidth = mz.cs * 0.28;
-                ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(px, py); ctx.stroke();
+                ctx.strokeStyle = 'rgba(210,252,255,0.8)'; ctx.lineWidth = size * 0.28;
+                ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(rp.x, rp.y); ctx.stroke();
             }
+            // 빛 덩어리
             ctx.globalCompositeOperation = 'lighter';
-            const gr = ctx.createRadialGradient(px, py, 0, px, py, mz.cs * 1.1);
-            gr.addColorStop(0, 'rgba(210,252,255,0.95)');
-            gr.addColorStop(0.35, 'rgba(70,200,255,0.5)');
+            const gr = ctx.createRadialGradient(rp.x, rp.y, 0, rp.x, rp.y, size * 1.5);
+            gr.addColorStop(0, 'rgba(215,253,255,0.95)');
+            gr.addColorStop(0.3, 'rgba(70,205,255,0.55)');
             gr.addColorStop(1, 'rgba(0,120,255,0)');
             ctx.fillStyle = gr;
-            ctx.beginPath(); ctx.arc(px, py, mz.cs * 1.1, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(rp.x, rp.y, size * 1.5, 0, Math.PI * 2); ctx.fill();
             ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(px, py, mz.cs * 0.2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(rp.x, rp.y, size * 0.2, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // 도착 후: 정답 길이 금색으로 쭉 그려짐
+        if (arriveAt !== null){
+            const p = Math.min(1, (now - arriveAt) / 0.9);
+            const n = Math.max(1, Math.floor(p * (mz.sol.length - 1)));
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            for (const [w, a] of [[size * 0.55, 0.20], [size * 0.18, 0.85]]){
+                ctx.strokeStyle = 'rgba(255,214,90,' + a + ')'; ctx.lineWidth = w;
+                ctx.beginPath();
+                for (let k = 0; k <= n; k++){
+                    const q = cellPx(mz.sol[k][0], mz.sol[k][1]);
+                    if (k === 0) ctx.moveTo(q[0], q[1]); else ctx.lineTo(q[0], q[1]);
+                }
+                ctx.stroke();
+            }
+            ctx.globalCompositeOperation = 'source-over';
         }
         ctx.restore();
+    }
+    function camScale(now){                   // 달리기 시작하면 확대해서 따라가고, 도착 직전에 다시 전체를 보여 줌
+        if (dotStart === null) return 1;
+        const e = t => t * t * (3 - 2 * t);
+        const zin = Math.min(1, Math.max(0, (now - dotStart) / 0.7));
+        const zout = Math.min(1, Math.max(0, (now - (dotEnd - 0.45)) / 0.55));
+        return 1 + 0.75 * e(zin) * (1 - e(zout));
     }
 
     /* ---------- 로고 ---------- */
@@ -4652,7 +4797,7 @@ window.addEventListener(
         if (!r.width){ logo.style.transition = 'opacity .5s'; logo.style.opacity = 0; return; }
         const s = r.width / w;
         void logo.offsetWidth;
-        logo.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1), opacity .35s ease .75s';
+        logo.style.transition = 'transform .9s cubic-bezier(.65,0,.25,1), opacity .35s ease .65s';
         logo.style.transform = 'translate(' + Math.round(r.left) + 'px,' + Math.round(r.top) + 'px) scale(' + s + ')';
         logo.style.opacity = 0;
     }
@@ -4663,34 +4808,46 @@ window.addEventListener(
     }
 
     /* ---------- 진행 ---------- */
-    function startClear(now){                 // 블록이 가득 찬 순간: 번쩍 + 블록이 가운데부터 걷힘
+    function startClear(now){                 // 블록이 가득 찬 순간: 번쩍 + 길 부분만 녹아 사라짐 → 미로 완성
         clearAt = now;
+        dotStart = now + 0.5;
+        dotEnd = dotStart + (mz.route.length - 1) / mz.speed;
         splash.classList.add('revealed');
         doFlash(W / 2, H / 2);
         spawnSparks(W / 2, H / 2);
-        if (ac) boom(ac.currentTime + 0.02);
-    }
-    function startMaze(now){                  // 미로 선이 퍼지고, 곧 빛이 출발
-        mazeAt = now;
-        dotStart = now + TUNE.mazeRevealSec * 0.65;
-        dotEnd = dotStart + (mz.route.length - 1) / mz.speed;
-        if (ac){                              // 달리는 동안 가벼운 틱 소리
-            const base = ac.currentTime + (dotStart - now);
+        shake(16); addRing(W / 2, H / 2, Math.hypot(W, H) * 0.6, 'rgba(170,240,255,', 0.9);
+        splash.classList.add('cine');                           // 위아래 검은 띠(영화 화면)
+        if (ac){
+            impact(ac.currentTime + 0.02, true);
+            const arrT = ac.currentTime + (dotEnd + 0.1 - now); // 도착 순간에 맞춰 스웰 → 충격음
+            swell(arrT - 0.9, 0.9, [130.8, 196, 261.6, 329.6], 0.045);
+            riserNoise(arrT - 0.7, 0.7, 0.10);
+            impact(arrT + 0.01, true);
+            const base = ac.currentTime + (dotStart - now);     // 달리는 동안 가벼운 틱 소리
             for (let i = 0; i < mz.route.length; i += 4)
                 tone(base + i / mz.speed, 700 + ((i / 4) % 8) * 60, 0.045, 0.03, 'triangle');
+            mz.deadEnds.forEach(de => {                          // 막다른 길에서 "툭" 소리
+                tone(base + de.i / mz.speed, 190, 0.10, 0.09, 'square');
+                tone(base + de.i / mz.speed + 0.03, 120, 0.12, 0.07, 'sine');
+            });
         }
     }
     function arrive(now){                     // 출구 도착: 번쩍 + 띠링 + 로고 등장
         arriveAt = now;
-        doFlash(mz.ex, mz.ey);
-        spawnSparks(mz.ex, mz.ey);
+        const [exx, exy] = cellPx(mz.gw - 2, mz.gh - 2);
+        doFlash(exx, exy);
+        spawnSparks(exx, exy);
         logoBg.classList.add('on');
         logo.classList.add('show'); logo.style.opacity = 1;
-        if (ac) boom(ac.currentTime + 0.02);
+        logo.classList.add('glitch');                            // 로고가 지직거리며 박힘
+        shake(20);
+        addRing(exx, exy, Math.hypot(W, H) * 0.55, 'rgba(255,224,130,', 0.95);
+        addRing(exx, exy, Math.hypot(W, H) * 0.35, 'rgba(170,240,255,', 0.7);
         playDing();
     }
-    function startBreak(now){                 // 로고가 로비 제목 자리로 날아가며 로비가 나타남
+    function startBreak(now){                 // 로고가 로비 제목 자리로 날아가며 남은 벽이 무너지고 로비가 나타남
         breakAt = now;
+        splash.classList.remove('cine');
         logoBg.classList.remove('on');
         splash.style.background = 'transparent';
         splash.classList.add('clear');
@@ -4698,6 +4855,8 @@ window.addEventListener(
         restartLobbyArrive();
         if (ac) noise(ac.currentTime + 0.02, 0.8, 0.14, 500, 4000);
     }
+    function shake(a){ shakeAmp = Math.max(shakeAmp, a); }
+    function addRing(x, y, max, col, dur){ rings.push({ x, y, max, col, dur, t0: -1 }); }
     function finish(){
         if (finished) return;
         finished = true;
@@ -4726,37 +4885,109 @@ window.addEventListener(
         const g = TUNE.gravity;
         ctx.clearRect(0, 0, W, H);
 
-        // 1) 미로 (블록 아래층)
-        if (mazeAt !== null) drawMaze(now);
+        // 빛 위치 + 카메라
+        const running = dotStart !== null && now >= dotStart;
+        const rp = running ? runnerPos(now) : null;
+        const cs = camScale(now);
+        ctx.save();
+        if (shakeAmp > 0.05){                                   // 화면 흔들림
+            ctx.translate((Math.random() - 0.5) * 2 * shakeAmp, (Math.random() - 0.5) * 2 * shakeAmp);
+            shakeAmp *= Math.exp(-dt * 9);
+        } else shakeAmp = 0;
+        let landing = 0;
+        if (cs > 1.001){
+            if (rp){
+                const k = Math.min(1, dt * 7);
+                camX += (rp.x - camX) * k; camY += (rp.y - camY) * k;
+            }
+            let tx = W / 2 - camX * cs, ty = H / 2 - camY * cs;
+            tx = Math.min(0, Math.max(W - W * cs, tx)); ty = Math.min(0, Math.max(H - H * cs, ty));
+            ctx.translate(tx, ty); ctx.scale(cs, cs);
+        }
 
-        // 2) 블록
-        if (clearAt === null || now - clearAt < 1.2){
-            for (let i = 0; i < blocks.length; i++){
-                const b = blocks[i];
-                if (clearAt !== null){
-                    const p = Math.min(1, Math.max(0, (now - clearAt - b.dd) / 0.3));
-                    if (p >= 1) continue;
-                    const sz = size * (1 - p);
-                    if (sz < 6) continue;
-                    const off = (size - sz) / 2;
-                    ctx.globalAlpha = 1 - p * 0.9;
-                    drawBlock(b.x + off, b.rest + off, sz, b.color, p * 0.5);
-                    ctx.globalAlpha = 1;
-                    continue;
+        // 막다른 길에 닿는 순간 붉은 불꽃
+        if (rp){
+            for (const de of mz.deadEnds){
+                if (!de.fired && rp.u >= de.i){
+                    de.fired = true;
+                    const p = cellPx(mz.route[de.i][0], mz.route[de.i][1]);
+                    spawnSparks(p[0], p[1], 18, ['#ff7a5a', '#ffb347', '#ffffff'], 120, 420);
                 }
-                const tl = now - b.ts;
-                if (tl < 0) continue;
-                let y;
-                if (tl < b.tf) y = -size + 0.5 * g * tl * tl;
-                else {
-                    const tb2 = tl - b.tf;
-                    y = b.rest - (tb2 < 0.22 ? size * 0.09 * Math.sin(Math.PI * tb2 / 0.22) * (1 - tb2 / 0.22) : 0);
-                }
-                drawBlock(b.x, y, size, b.color, 0);
             }
         }
 
-        // 3) 반짝이 파티클
+        // 1) 길 바닥 (블록이 녹은 자리에 은은한 빛 + 격자점)
+        if (clearAt !== null && breakAt === null){
+            const a = Math.min(1, (now - clearAt) / 0.8);
+            ctx.fillStyle = 'rgba(110,230,240,' + (a * 0.10).toFixed(3) + ')';
+            for (let i = 0; i < pathCells.length; i++){
+                const b = pathCells[i];
+                ctx.fillRect(b.x, b.rest, size, size);
+            }
+            ctx.fillStyle = 'rgba(160,240,255,' + (a * 0.22).toFixed(3) + ')';
+            for (let i = 0; i < pathCells.length; i++){
+                const b = pathCells[i];
+                ctx.fillRect(b.x + size / 2 - 1.5, b.rest + size / 2 - 1.5, 3, 3);
+            }
+        }
+
+        // 2) 블록
+        const wallAlpha = arriveAt !== null ? 1 - 0.65 * Math.min(1, (now - arriveAt) / 0.5) : 1;
+        const waveR = clearAt !== null ? (now - clearAt) * 38 : -1;
+        for (let i = 0; i < blocks.length; i++){
+            const b = blocks[i];
+            if (breakAt !== null){
+                if (b.type !== 'wall') continue;
+                const tb = now - breakAt - b.bd;
+                const y = tb <= 0 ? b.rest : b.rest + 0.5 * g * 0.9 * tb * tb;
+                if (y > H + size) continue;
+                ctx.globalAlpha = wallAlpha;
+                drawWall(b, y, 0);
+                ctx.globalAlpha = 1;
+                continue;
+            }
+            if (clearAt !== null){
+                if (b.type === 'wall'){
+                    let boost = 0;
+                    if (waveR >= 0 && waveR < 90){                         // 입구에서 퍼지는 빛의 물결
+                        const dd = Math.hypot(b.cx - 1, b.cy - 1);
+                        boost += Math.max(0, 1 - Math.abs(dd - waveR) / 2.2) * 0.45;
+                    }
+                    if (rp){                                               // 빛이 가까이 지나가면 벽이 반응
+                        const dist = Math.hypot(b.x + size / 2 - rp.x, b.rest + size / 2 - rp.y) / size;
+                        boost += Math.max(0, 1 - dist / 3.2) * 0.5;
+                    }
+                    ctx.globalAlpha = wallAlpha;
+                    drawWall(b, b.rest, boost);
+                    ctx.globalAlpha = 1;
+                    continue;
+                }
+                const p = Math.min(1, Math.max(0, (now - clearAt - b.dd) / 0.3));
+                if (p >= 1) continue;
+                const sz = size * (1 - p);
+                if (sz < 6) continue;
+                const off = (size - sz) / 2;
+                ctx.globalAlpha = 1 - p * 0.9;
+                drawBlock(b.x + off, b.rest + off, sz, b.color, p * 0.5);
+                ctx.globalAlpha = 1;
+                continue;
+            }
+            const tl = now - b.ts;
+            if (tl < 0) continue;
+            let y;
+            if (tl < b.tf) y = -size + 0.5 * g * tl * tl;
+            else {
+                const tb2 = tl - b.tf;
+                if (tb2 < 0.06) landing++;
+                y = b.rest - (tb2 < 0.22 ? size * 0.09 * Math.sin(Math.PI * tb2 / 0.22) * (1 - tb2 / 0.22) : 0);
+            }
+            drawBlock(b.x, y, size, b.color, 0);
+        }
+
+        // 3) 포털 + 달리는 빛 + 정답 길
+        if (clearAt !== null) drawRunner(now, rp);
+
+        // 4) 반짝이 파티클
         if (particles.length){
             ctx.globalCompositeOperation = 'lighter';
             for (let i = particles.length - 1; i >= 0; i--){
@@ -4771,9 +5002,27 @@ window.addEventListener(
             ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
         }
 
-        // 4) 단계 전환
+        // 충격파 링
+        if (rings.length){
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = rings.length - 1; i >= 0; i--){
+                const r = rings[i];
+                if (r.t0 < 0) r.t0 = now;
+                const p = (now - r.t0) / r.dur;
+                if (p >= 1){ rings.splice(i, 1); continue; }
+                const e = 1 - Math.pow(1 - p, 3);
+                ctx.strokeStyle = r.col + (1 - p).toFixed(3) + ')';
+                ctx.lineWidth = 2 + 16 * (1 - p);
+                ctx.beginPath(); ctx.arc(r.x, r.y, r.max * e, 0, Math.PI * 2); ctx.stroke();
+            }
+            ctx.restore();
+        }
+        if (landing > 0 && clearAt === null) shake(Math.min(3.2, landing * 0.08));     // 블록이 쌓일 때 미세한 진동
+        ctx.restore();
+
+        // 5) 단계 전환
         if (clearAt === null){ if (now >= maxLand + 0.15) startClear(now); }
-        else if (mazeAt === null){ if (now >= clearAt + 0.45) startMaze(now); }
         else if (arriveAt === null){ if (now >= dotEnd + 0.1) arrive(now); }
         else if (breakAt === null){ if (now >= arriveAt + TUNE.logoHoldSec) startBreak(now); }
         else if (now >= breakAt + TUNE.breakSec){ finish(); return; }
@@ -4793,9 +5042,12 @@ window.addEventListener(
         }
         getAC();
         primeDing();
-        layout(); buildBlocks(); buildLogo(); buildMaze();
+        layout(); buildScene(); buildLogo();
         const startDelay = 0.3;
-        if (ac) cascadeSound(ac.currentTime + startDelay, Math.min(Math.max(maxLand - 0.1, 1), 3.2));
+        if (ac){
+            cascadeSound(ac.currentTime + startDelay, Math.min(Math.max(maxLand - 0.1, 1), 3.2));
+            riserNoise(ac.currentTime + startDelay + Math.max(0, maxLand + 0.15 - 1.0), 1.0, 0.16);   // 번쩍이는 순간까지 고조
+        }
         t0 = performance.now() - (-startDelay * 1000);   // 버튼이 사라진 뒤 블록이 떨어지기 시작
         lastNow = performance.now();
         raf = requestAnimationFrame(frame);
