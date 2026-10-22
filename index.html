@@ -1582,6 +1582,12 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 #splash.fade-out{opacity:0;transition:opacity .4s ease}
 @media(prefers-reduced-motion:reduce){#splash-start{animation:none!important}#splash::before{animation:none!important}}
 #splash.clear::before{animation:none!important;opacity:0;transition:opacity .25s ease}
+#splash-skip{position:absolute;right:max(18px,3vw);bottom:max(18px,3.5vh);z-index:5;padding:11px 22px;font:inherit;font-size:clamp(13px,1.8vw,16px);font-weight:900;letter-spacing:.16em;color:#cfefff;background:rgba(6,24,44,.62);border:1.5px solid rgba(110,220,255,.6);border-radius:999px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .4s ease .6s,background .2s ease,transform .2s ease;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#splash-skip span{font-size:.8em;margin-left:4px}
+#splash.going #splash-skip{opacity:.85;pointer-events:auto}
+#splash-skip:hover{background:rgba(20,70,120,.8);transform:translateY(-2px)}
+#splash-skip:focus-visible{outline:3px solid #ffd65a;outline-offset:4px}
+#splash.fade-out #splash-skip,#splash.clear #splash-skip{opacity:0;pointer-events:none;transition:opacity .2s ease}
 </style>
 </head>
 
@@ -2005,6 +2011,7 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
     <div id="splash-logo" aria-hidden="true"></div>
     <div id="splash-flash"></div>
     <button id="splash-start" type="button">START</button>
+    <button id="splash-skip" type="button" aria-label="건너뛰기">SKIP <span>▶</span></button>
 </div>
 
 <script>
@@ -4313,24 +4320,27 @@ window.addEventListener(
 
 <script>
 /* =========================================================
-   START 화면 → 로비 전환 연출 (블록 낙하 → 번쩍 + 띠링 → EX:MAZE 로고 이동)
-   숫자만 바꿔서 속도/분위기를 조절할 수 있음
+   인트로: START → 블록 낙하 → 번쩍 → 블록 걷힘 → 미로 길 + 빛 달리기 → 도착(띠링) → EX:MAZE 로고 → 로비
+   숫자만 바꿔서 속도/분위기를 조절할 수 있음. 도중에 SKIP 버튼(또는 Esc/Enter/Space)으로 건너뛰기 가능
 ========================================================= */
 (function(){
     const splash = document.getElementById('splash');
     if (!splash) return;
 
     const TUNE = {
-        fillSec: 1.7,      // 블록이 화면을 다 채우는 데 걸리는 시간(초). 작을수록 빠름
-        logoHoldSec: 2.2,  // 배경이 드러난 뒤 로고가 네온처럼 켜지고 머무는 시간(초)
-        breakSec: 1.1,     // 블록이 무너지며 로비가 나타나는 시간(초)
-        gravity: 5200,     // 블록 낙하 가속도
-        volume: 1.0,       // 블록 쌓일 때 효과음(코드로 합성) 크기 배율 (0이면 무음)
-        dingFile: 'effect2.mp3', // ★ 번쩍일 때 나는 "띠링" 소리 파일 (index.html과 같은 폴더에 넣으세요)
-        dingVolume: 1.0    // 띠링 소리 크기 (0~1)
+        fillSec: 1.7,         // 블록이 화면을 다 채우는 데 걸리는 시간(초). 작을수록 빠름
+        mazeRevealSec: 1.1,   // 미로 선이 퍼져 나가며 그려지는 시간(초)
+        mazeSec: 3.0,         // 빛이 미로를 달리는 시간(초). 길을 헤매는 길이에 따라 속도가 자동 조절됨
+        logoHoldSec: 2.0,     // 도착 후 EX:MAZE 로고가 네온처럼 켜지고 머무는 시간(초)
+        breakSec: 1.1,        // 로비가 나타나는 시간(초)
+        gravity: 5200,        // 블록 낙하 가속도
+        volume: 1.0,          // 코드로 합성한 효과음(쌓이는 소리 등) 크기 배율 (0이면 무음)
+        dingFile: 'effect2.mp3', // ★ 미로 출구에 도착할 때 나는 "띠링" 소리 파일 (index.html과 같은 폴더에 넣으세요)
+        dingVolume: 1.0       // 띠링 소리 크기 (0~1)
     };
 
     const btn = document.getElementById('splash-start');
+    const skipBtn = document.getElementById('splash-skip');
     const cv = document.getElementById('splash-canvas');
     const ctx = cv.getContext('2d');
     const flashEl = document.getElementById('splash-flash');
@@ -4338,18 +4348,24 @@ window.addEventListener(
     const logoBg = document.getElementById('splash-logo-bg');
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    let started = false, finished = false, raf = 0;
+    let started = false, finished = false, skipping = false, raf = 0, startedAtMs = 0;
     let W = 0, H = 0, DPR = 1, size = 56, cols = 0, rows = 0;
     let blocks = [], particles = [];
-    let t0 = 0, maxLand = 0, litAt = null, breakAt = null, lastNow = 0;
+    let t0 = 0, maxLand = 0, lastNow = 0;
+    let clearAt = null, mazeAt = null, dotStart = null, dotEnd = 0, arriveAt = null, breakAt = null;
+    // 미로 연출용
+    let mz = null;   // { cs, ox, oy, gw, gh, route, speed, cv, sx, sy, ex, ey, maxR }
 
-    /* ---------- 소리 (WebAudio 합성: 별도 파일 필요 없음) ---------- */
-    let ac = null;
+    /* ---------- 소리 (WebAudio 합성 + 띠링은 mp3 파일) ---------- */
+    let ac = null, master = null;
     function getAC(){
         try{
-            if (!ac){ const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
+            if (!ac){
+                const C = window.AudioContext || window.webkitAudioContext;
+                if (C){ ac = new C(); master = ac.createGain(); master.gain.value = 1; master.connect(ac.destination); }
+            }
             if (ac && ac.state === 'suspended') ac.resume();
-        }catch(e){ ac = null; }
+        }catch(e){ ac = null; master = null; }
         return ac;
     }
     function tone(t, f, dur, gain, type){
@@ -4360,7 +4376,7 @@ window.addEventListener(
         g.gain.setValueAtTime(0.0001, t);
         g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * TUNE.volume), t + 0.004);
         g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        o.connect(g); g.connect(ac.destination);
+        o.connect(g); g.connect(master);
         o.start(t); o.stop(t + dur + 0.03);
     }
     function noise(t, dur, gain, f0, f1){
@@ -4374,7 +4390,7 @@ window.addEventListener(
         g.gain.setValueAtTime(0.0001, t);
         g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * TUNE.volume), t + dur * 0.3);
         g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        s.connect(bp); bp.connect(g); g.connect(ac.destination);
+        s.connect(bp); bp.connect(g); g.connect(master);
         s.start(t); s.stop(t + dur + 0.02);
     }
     function cascadeSound(t, dur){          // 블록이 촤라락 쌓이는 소리: 오르는 펜타토닉 블립
@@ -4384,6 +4400,16 @@ window.addEventListener(
             const semi = scale[k % 5] + 12 * Math.floor(k / 5);
             tone(t + i * 0.03, 330 * Math.pow(2, semi / 12), 0.07, 0.05, 'triangle');
         }
+    }
+    function boom(t){
+        if (!ac || TUNE.volume <= 0) return;
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.28 * TUNE.volume, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.5);
     }
     /* 띠링 소리: effect2.mp3 파일을 재생 (파일이 없으면 이 소리만 조용히 생략됨) */
     const dingAudio = new Audio(TUNE.dingFile);
@@ -4403,16 +4429,6 @@ window.addEventListener(
             const p = dingAudio.play();
             if (p && p.catch) p.catch(() => {});
         }catch(e){}
-    }
-    function boom(t){
-        if (!ac || TUNE.volume <= 0) return;
-        const o = ac.createOscillator(), g = ac.createGain();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.28 * TUNE.volume, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
-        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.5);
     }
 
     /* ---------- 캔버스 / 블록 ---------- */
@@ -4443,7 +4459,6 @@ window.addEventListener(
                 blocks.push({
                     c, r, x: c * size, rest, tf, ts: land - tf, land,
                     color: gold ? '#ffd65a' : PALETTE[Math.floor(Math.random() * PALETTE.length)],
-                    bd: r * 0.03 + Math.random() * 0.18,     // (예전 방식용, 지금은 사용 안 함)
                     dd: Math.hypot((c + 0.5) - cols / 2, (r + 0.5) - rows / 2) / Math.hypot(cols / 2, rows / 2) * 0.55 + Math.random() * 0.06  // 가운데서 바깥으로 걷힘
                 });
                 if (land > maxLand) maxLand = land;
@@ -4460,13 +4475,156 @@ window.addEventListener(
         ctx.strokeRect(x + 0.75, y + 0.75, s - 1.5, s - 1.5);
         if (boost > 0.01){ ctx.fillStyle = 'rgba(205,248,255,' + boost.toFixed(3) + ')'; ctx.fillRect(x, y, s, s); }
     }
-    function spawnSparks(){
-        const cx = W / 2, cy = H / 2, cols2 = ['#ffffff', '#9eeaff', '#ffd65a', '#55d9ff'];
+    function spawnSparks(cx, cy){
+        const cs2 = ['#ffffff', '#9eeaff', '#ffd65a', '#55d9ff'];
         for (let i = 0; i < 110; i++){
             const a = Math.random() * Math.PI * 2, sp = 250 + Math.random() * 850;
             particles.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.7 + Math.random() * 0.8,
-                s: 2 + Math.random() * 4, c: cols2[Math.floor(Math.random() * cols2.length)] });
+                s: 2 + Math.random() * 4, c: cs2[Math.floor(Math.random() * cs2.length)] });
         }
+    }
+    function doFlash(x, y){
+        flashEl.classList.remove('go');
+        flashEl.style.background = 'radial-gradient(circle at ' + Math.round(x) + 'px ' + Math.round(y) +
+            'px,#fff 0,#c9f6ff 14%,rgba(90,205,255,.55) 40%,transparent 75%)';
+        void flashEl.offsetWidth;
+        flashEl.classList.add('go');
+    }
+
+    /* ---------- 미로 (벽은 네온 선, 빛이 길을 헤매다 출구로) ---------- */
+    function carveMaze(gw, gh){
+        const g = Array.from({ length: gh }, () => Array(gw).fill(1));
+        const st = [[1, 1]]; g[1][1] = 0;
+        while (st.length){
+            const [x, y] = st[st.length - 1];
+            const nb = [[2, 0], [-2, 0], [0, 2], [0, -2]].filter(([dx, dy]) => {
+                const nx = x + dx, ny = y + dy;
+                return nx > 0 && ny > 0 && nx < gw - 1 && ny < gh - 1 && g[ny][nx] === 1;
+            });
+            if (!nb.length){ st.pop(); continue; }
+            const [dx, dy] = nb[Math.floor(Math.random() * nb.length)];
+            g[y + dy / 2][x + dx / 2] = 0; g[y + dy][x + dx] = 0;
+            st.push([x + dx, y + dy]);
+        }
+        return g;
+    }
+    function explore(g, gw, gh){           // 출구 쪽을 선호하지만 막다른 길도 들어갔다 나오는 탐험 경로
+        const ex = gw - 2, ey = gh - 2;
+        const seen = new Set(['1,1']), st = [[1, 1]], route = [[1, 1]];
+        let guard = 0;
+        while (st.length && guard++ < 30000){
+            const [x, y] = st[st.length - 1];
+            if (x === ex && y === ey) break;
+            const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [x + dx, y + dy])
+                .filter(([nx, ny]) => g[ny] && g[ny][nx] === 0 && !seen.has(nx + ',' + ny));
+            if (nb.length){
+                nb.sort((a, b) => (Math.abs(a[0] - ex) + Math.abs(a[1] - ey)) - (Math.abs(b[0] - ex) + Math.abs(b[1] - ey)) + (Math.random() - 0.5) * 6);
+                const n = nb[0]; seen.add(n[0] + ',' + n[1]); st.push(n); route.push(n);
+            } else {
+                st.pop(); const top = st[st.length - 1]; if (top) route.push(top);
+            }
+        }
+        return route;
+    }
+    function buildMaze(){
+        const cs = Math.max(28, Math.min(52, Math.round(Math.min(W, H) / 16)));
+        let gw = Math.floor(W / cs), gh = Math.floor(H / cs);
+        if (gw % 2 === 0) gw--; if (gh % 2 === 0) gh--;
+        gw = Math.max(9, gw); gh = Math.max(9, gh);
+        const ox = (W - gw * cs) / 2, oy = (H - gh * cs) / 2;
+        const g = carveMaze(gw, gh);
+        let route = null;
+        const targetLen = TUNE.mazeSec * 70;               // 막다른 길 구경도 하되 너무 길지 않은 경로를 고름
+        for (let i = 0; i < 12; i++){
+            const r = explore(g, gw, gh);
+            if (!route || Math.abs(r.length - targetLen) < Math.abs(route.length - targetLen)) route = r;
+        }
+        const speed = Math.max(45, Math.min(130, (route.length - 1) / TUNE.mazeSec));
+
+        const mcv = document.createElement('canvas');
+        mcv.width = Math.floor(W * DPR); mcv.height = Math.floor(H * DPR);
+        const m = mcv.getContext('2d');
+        m.setTransform(DPR, 0, 0, DPR, 0, 0);
+        m.shadowColor = 'rgba(60,200,255,0.9)'; m.shadowBlur = 10;
+        m.fillStyle = 'rgba(8,40,80,0.85)'; m.strokeStyle = 'rgba(120,225,255,0.95)'; m.lineWidth = 1.5;
+        for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++){
+            if (g[y][x] !== 1) continue;
+            const px = ox + x * cs + 2, py = oy + y * cs + 2, s = cs - 4;
+            m.fillRect(px, py, s, s); m.strokeRect(px, py, s, s);
+        }
+        mz = {
+            cs, ox, oy, gw, gh, route, speed, cv: mcv,
+            sx: ox + 1.5 * cs, sy: oy + 1.5 * cs,
+            ex: ox + (gw - 1.5) * cs, ey: oy + (gh - 1.5) * cs,
+            maxR: Math.hypot(W, H)
+        };
+    }
+    function cellPx(cx, cy){ return [mz.ox + (cx + 0.5) * mz.cs, mz.oy + (cy + 0.5) * mz.cs]; }
+
+    function drawMaze(now){
+        let alpha = 1;
+        if (arriveAt !== null && breakAt === null) alpha = 1 - 0.7 * Math.min(1, (now - arriveAt) / 0.5);
+        if (breakAt !== null) alpha = 0.3 * (1 - Math.min(1, (now - breakAt) / (TUNE.breakSec * 0.8)));
+        if (alpha <= 0.01) return;
+        const rt = Math.min(1, Math.max(0, (now - mazeAt) / TUNE.mazeRevealSec));
+        const R = (1 - Math.pow(1 - rt, 2)) * mz.maxR;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.beginPath(); ctx.arc(mz.sx, mz.sy, R, 0, Math.PI * 2); ctx.clip();
+        ctx.drawImage(mz.cv, 0, 0, W, H);
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        if (rt < 1){                                         // 퍼져 나가는 빛의 테두리
+            ctx.strokeStyle = 'rgba(150,235,255,' + (0.55 * (1 - rt)).toFixed(3) + ')'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(mz.sx, mz.sy, R, 0, Math.PI * 2); ctx.stroke();
+        }
+        // 출구 표시 (금색으로 깜빡)
+        const pulse = 0.55 + 0.45 * Math.sin(now * 6);
+        ctx.fillStyle = 'rgba(255,214,90,' + (0.35 + 0.4 * pulse).toFixed(3) + ')';
+        ctx.fillRect(mz.ex - mz.cs * 0.4, mz.ey - mz.cs * 0.4, mz.cs * 0.8, mz.cs * 0.8);
+        ctx.strokeStyle = 'rgba(255,230,140,0.95)'; ctx.lineWidth = 2;
+        ctx.strokeRect(mz.ex - mz.cs * 0.4, mz.ey - mz.cs * 0.4, mz.cs * 0.8, mz.cs * 0.8);
+
+        // 달리는 빛 + 꼬리
+        if (dotStart !== null && now >= dotStart){
+            const route = mz.route, last = route.length - 1;
+            const u = Math.min(last, (now - dotStart) * mz.speed);
+            const i = Math.min(last, Math.floor(u)), f = i >= last ? 0 : u - i;
+            const a = route[i], b = route[Math.min(i + 1, last)];
+            const [px, py] = cellPx(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f);
+
+            const K = 22;
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            let prev = null;
+            for (let k = Math.max(0, i - K); k <= i; k++){
+                const p = cellPx(route[k][0], route[k][1]);
+                if (prev){
+                    const frac = (k - (i - K)) / K;
+                    ctx.strokeStyle = 'rgba(160,240,255,' + (0.08 + 0.55 * Math.max(0, frac)).toFixed(3) + ')';
+                    ctx.lineWidth = mz.cs * (0.08 + 0.2 * Math.max(0, frac));
+                    ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+                }
+                prev = p;
+            }
+            if (prev){
+                ctx.strokeStyle = 'rgba(200,250,255,0.75)'; ctx.lineWidth = mz.cs * 0.28;
+                ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(px, py); ctx.stroke();
+            }
+            ctx.globalCompositeOperation = 'lighter';
+            const gr = ctx.createRadialGradient(px, py, 0, px, py, mz.cs * 1.1);
+            gr.addColorStop(0, 'rgba(210,252,255,0.95)');
+            gr.addColorStop(0.35, 'rgba(70,200,255,0.5)');
+            gr.addColorStop(1, 'rgba(0,120,255,0)');
+            ctx.fillStyle = gr;
+            ctx.beginPath(); ctx.arc(px, py, mz.cs * 1.1, 0, Math.PI * 2); ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(px, py, mz.cs * 0.2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
     }
 
     /* ---------- 로고 ---------- */
@@ -4496,17 +4654,33 @@ window.addEventListener(
     }
 
     /* ---------- 진행 ---------- */
-    function lit(now){
-        litAt = now;
+    function startClear(now){                 // 블록이 가득 찬 순간: 번쩍 + 블록이 가운데부터 걷힘
+        clearAt = now;
         splash.classList.add('revealed');
-        flashEl.classList.add('go');
+        doFlash(W / 2, H / 2);
+        spawnSparks(W / 2, H / 2);
+        if (ac) boom(ac.currentTime + 0.02);
+    }
+    function startMaze(now){                  // 미로 선이 퍼지고, 곧 빛이 출발
+        mazeAt = now;
+        dotStart = now + TUNE.mazeRevealSec * 0.65;
+        dotEnd = dotStart + (mz.route.length - 1) / mz.speed;
+        if (ac){                              // 달리는 동안 가벼운 틱 소리
+            const base = ac.currentTime + (dotStart - now);
+            for (let i = 0; i < mz.route.length; i += 4)
+                tone(base + i / mz.speed, 700 + ((i / 4) % 8) * 60, 0.045, 0.03, 'triangle');
+        }
+    }
+    function arrive(now){                     // 출구 도착: 번쩍 + 띠링 + 로고 등장
+        arriveAt = now;
+        doFlash(mz.ex, mz.ey);
+        spawnSparks(mz.ex, mz.ey);
         logoBg.classList.add('on');
         logo.classList.add('show'); logo.style.opacity = 1;
-        spawnSparks();
         if (ac) boom(ac.currentTime + 0.02);
         playDing();
     }
-    function startBreak(now){
+    function startBreak(now){                 // 로고가 로비 제목 자리로 날아가며 로비가 나타남
         breakAt = now;
         logoBg.classList.remove('on');
         splash.style.background = 'transparent';
@@ -4525,47 +4699,62 @@ window.addEventListener(
         const input = document.getElementById('festival-player-name');
         if (input && !('ontouchstart' in window)) { try { input.focus({ preventScroll: true }); } catch(e){} }
     }
+    function skip(){                          // 건너뛰기: 소리 끄고 바로 로비로
+        if (!started || finished || skipping) return;
+        skipping = true;
+        cancelAnimationFrame(raf);
+        try { dingAudio.pause(); } catch(e){}
+        try { if (master && ac) master.gain.setValueAtTime(0, ac.currentTime); } catch(e){}
+        splash.classList.add('fade-out');
+        restartLobbyArrive();
+        setTimeout(finish, 420);
+    }
 
     function frame(ts){
+        if (skipping || finished) return;
         const now = (ts - t0) / 1000;
         const dt = Math.min(0.05, Math.max(0, (ts - lastNow) / 1000)); lastNow = ts;
         const g = TUNE.gravity;
         ctx.clearRect(0, 0, W, H);
 
-        for (let i = 0; i < blocks.length; i++){
-            const b = blocks[i];
-            if (litAt !== null){
-                // 화면이 가득 찬 순간: 블록이 가운데부터 작아지며 걷히고 배경이 드러남
-                const p = Math.min(1, Math.max(0, (now - litAt - b.dd) / 0.3));
-                if (p >= 1) continue;
-                const sz = size * (1 - p);
-                if (sz < 6) continue;
-                const off = (size - sz) / 2;
-                ctx.globalAlpha = 1 - p * 0.9;
-                drawBlock(b.x + off, b.rest + off, sz, b.color, p * 0.5);
-                ctx.globalAlpha = 1;
-                continue;
+        // 1) 미로 (블록 아래층)
+        if (mazeAt !== null) drawMaze(now);
+
+        // 2) 블록
+        if (clearAt === null || now - clearAt < 1.2){
+            for (let i = 0; i < blocks.length; i++){
+                const b = blocks[i];
+                if (clearAt !== null){
+                    const p = Math.min(1, Math.max(0, (now - clearAt - b.dd) / 0.3));
+                    if (p >= 1) continue;
+                    const sz = size * (1 - p);
+                    if (sz < 6) continue;
+                    const off = (size - sz) / 2;
+                    ctx.globalAlpha = 1 - p * 0.9;
+                    drawBlock(b.x + off, b.rest + off, sz, b.color, p * 0.5);
+                    ctx.globalAlpha = 1;
+                    continue;
+                }
+                const tl = now - b.ts;
+                if (tl < 0) continue;
+                let y;
+                if (tl < b.tf) y = -size + 0.5 * g * tl * tl;
+                else {
+                    const tb2 = tl - b.tf;
+                    y = b.rest - (tb2 < 0.22 ? size * 0.09 * Math.sin(Math.PI * tb2 / 0.22) * (1 - tb2 / 0.22) : 0);
+                }
+                drawBlock(b.x, y, size, b.color, 0);
             }
-            const tl = now - b.ts;
-            if (tl < 0) continue;
-            let y;
-            if (tl < b.tf) y = -size + 0.5 * g * tl * tl;
-            else {
-                const tb2 = tl - b.tf;
-                y = b.rest - (tb2 < 0.22 ? size * 0.09 * Math.sin(Math.PI * tb2 / 0.22) * (1 - tb2 / 0.22) : 0);
-            }
-            drawBlock(b.x, y, size, b.color, 0);
         }
 
-        // 반짝이 파티클
+        // 3) 반짝이 파티클
         if (particles.length){
             ctx.globalCompositeOperation = 'lighter';
             for (let i = particles.length - 1; i >= 0; i--){
                 const p = particles[i];
                 p.life += dt; if (p.life >= p.max){ particles.splice(i, 1); continue; }
                 p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985; p.vy *= 0.985;
-                const a = 1 - p.life / p.max;
-                ctx.globalAlpha = a; ctx.fillStyle = p.c;
+                ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.c;
                 ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
                 ctx.fillRect(p.x - p.s * 1.6, p.y - 0.5, p.s * 3.2, 1);
                 ctx.fillRect(p.x - 0.5, p.y - p.s * 1.6, 1, p.s * 3.2);
@@ -4573,9 +4762,12 @@ window.addEventListener(
             ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
         }
 
-        if (litAt === null && now >= maxLand + 0.15) lit(now);
-        else if (litAt !== null && breakAt === null && now >= litAt + TUNE.logoHoldSec) startBreak(now);
-        else if (breakAt !== null && now >= breakAt + TUNE.breakSec) { finish(); return; }
+        // 4) 단계 전환
+        if (clearAt === null){ if (now >= maxLand + 0.15) startClear(now); }
+        else if (mazeAt === null){ if (now >= clearAt + 0.45) startMaze(now); }
+        else if (arriveAt === null){ if (now >= dotEnd + 0.1) arrive(now); }
+        else if (breakAt === null){ if (now >= arriveAt + TUNE.logoHoldSec) startBreak(now); }
+        else if (now >= breakAt + TUNE.breakSec){ finish(); return; }
 
         raf = requestAnimationFrame(frame);
     }
@@ -4583,6 +4775,7 @@ window.addEventListener(
     function begin(){
         if (started) return;
         started = true;
+        startedAtMs = Date.now();
         splash.classList.add('going');
         if (reduce){
             splash.classList.add('fade-out');
@@ -4591,7 +4784,7 @@ window.addEventListener(
         }
         getAC();
         primeDing();
-        layout(); buildBlocks(); buildLogo();
+        layout(); buildBlocks(); buildLogo(); buildMaze();
         const startDelay = 0.3;
         if (ac) cascadeSound(ac.currentTime + startDelay, Math.min(Math.max(maxLand - 0.1, 1), 3.2));
         t0 = performance.now() - (-startDelay * 1000);   // 버튼이 사라진 뒤 블록이 떨어지기 시작
@@ -4599,12 +4792,16 @@ window.addEventListener(
         raf = requestAnimationFrame(frame);
     }
     function onKey(e){
-        if (!started && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); e.stopPropagation(); begin(); }
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape'){
+            if (!started){ if (e.key !== 'Escape'){ e.preventDefault(); e.stopPropagation(); begin(); } }
+            else if (Date.now() - startedAtMs > 500){ e.preventDefault(); e.stopPropagation(); skip(); }  // 시작 직후 연타는 무시
+        }
     }
     function onResize(){ if (!started) layout(); }
 
     layout();
     btn.addEventListener('click', begin);
+    if (skipBtn) skipBtn.addEventListener('click', skip);
     document.addEventListener('keydown', onKey, true);
     window.addEventListener('resize', onResize);
     try { btn.focus({ preventScroll: true }); } catch(e){}
