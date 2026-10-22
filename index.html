@@ -3805,19 +3805,28 @@ function renderLoop() {
         const DARK_CLEAR  = 0.55; // 반경의 이 비율까지는 완전히 밝음 (그 바깥은 서서히 어두워짐)
         const PATH_HINT   = 0.12; // 어두운 곳에서 길(통로)이 희미하게 보이는 정도 (0이면 안 보임)
 
-        ctx.fillStyle = 'rgba(0,3,8,' + DARK_ALPHA + ')';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // 어둠 막은 별도 캔버스에서 만들어서(구멍을 뚫어도 미로·캐릭터가 지워지지 않게) 위에 덮어씌움
+        if (!window.__darkLayer) window.__darkLayer = document.createElement('canvas');
+        const dl = window.__darkLayer;
+        if (dl.width !== canvas.width || dl.height !== canvas.height) { dl.width = canvas.width; dl.height = canvas.height; }
+        const dctx = dl.getContext('2d');
+        dctx.globalCompositeOperation = 'source-over';
+        dctx.clearRect(0, 0, dl.width, dl.height);
+        dctx.fillStyle = 'rgba(0,3,8,' + DARK_ALPHA + ')';
+        dctx.fillRect(0, 0, dl.width, dl.height);
 
-        ctx.globalCompositeOperation = 'destination-out';
-        const grad = ctx.createRadialGradient(pX, pY, 0, pX, pY, cSize * DARK_RADIUS);
+        dctx.globalCompositeOperation = 'destination-out';
+        const grad = dctx.createRadialGradient(pX, pY, 0, pX, pY, cSize * DARK_RADIUS);
         grad.addColorStop(0, 'rgba(0,0,0,1)');
         grad.addColorStop(DARK_CLEAR, 'rgba(0,0,0,1)');
         grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(pX, pY, cSize * DARK_RADIUS, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
+        dctx.fillStyle = grad;
+        dctx.beginPath();
+        dctx.arc(pX, pY, cSize * DARK_RADIUS, 0, Math.PI * 2);
+        dctx.fill();
+        dctx.globalCompositeOperation = 'source-over';
+
+        ctx.drawImage(dl, 0, 0);
 
         // 통로 칸에 옅은 청록빛을 얹어서 벽과 길이 구분되게 함
         ctx.fillStyle = 'rgba(110,230,240,' + PATH_HINT + ')';
