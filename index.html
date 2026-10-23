@@ -2075,7 +2075,7 @@ const ctx =
 
 
 // 축제 기록용: 5개 고정 스테이지. 기존보다 미로 크기를 조금 줄여 플레이 부담을 낮춤.
-const stages = [{s:23}, {s:27}, {s:31}, {s:35}, {s:39}];
+const stages = [{s:21}, {s:25}, {s:29}, {s:33}, {s:37}];
 // 이동 속도: 이 값(ms)마다 1칸 이동. 클수록 느려져서 최소 클리어 시간이 길어짐 (기존 60)
 const MOVE_INTERVAL_MS = 80;
 
@@ -2623,10 +2623,8 @@ function runCountdown(done){
    - slowMul배 이상 걸리면 최저점(min), 그 사이는 시간에 따라 부드럽게 감소
 ========================================================= */
 const FESTIVAL_POINTS = {
-    max: 1000, min: 100,
+    max: 1200, min: 100,
     fastMul: 1.3, slowMul: 8,
-    gold: 4660,      // 총점 4660점 이상이면 GOLD (봉지 과자)
-    silver: 4400     // 총점 4400점 이상 4660점 미만이면 SILVER (박스 과자), 미만은 BRONZE (참가상 사탕)
 };
 function calcStagePoints(timeSec){
     const P = FESTIVAL_POINTS;
