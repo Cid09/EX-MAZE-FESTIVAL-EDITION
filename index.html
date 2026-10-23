@@ -1933,8 +1933,8 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
           <div style="margin-top:8px">체크포인트 3개를 전부 밟으면 탈출구가 활성화됩니다.</div>
           <div style="color:#a8c4d8;font-size:13px;margin-top:5px">인트로는 스킵 가능합니다.</div>
         </div>
-        <h3 style="color:#ffd86b;margin:20px 0 8px">보상</h3>
-        <div style="font-size:15px;line-height:1.9"><div>🥇 <b>4,660점 이상</b> → 골드</div><div>🥈 <b>4,400점 이상</b> → 실버</div><div>🥉 <b>4,400점 미만</b> → 브론즈</div></div>
+        <h3 style="color:#ffd86b;margin:20px 0 8px">기록용 포인트</h3>
+        <div style="font-size:15px;line-height:1.9">포인트는 게임 기록과 순위표를 위한 점수이며, 별도의 보상은 없습니다.</div>
         <h3 style="color:#ff8c9d;margin:20px 0 8px">주의 사항</h3>
         <div style="font-size:15px;line-height:1.9"><div>⚠️ 새로 고침 하지 마세요.</div><div>⚠️ 끝나면 돌아가기 버튼을 눌러주세요!</div></div>
         <button type="button" onclick="confirmFestivalRulesAndStart()" style="display:block;width:100%;margin-top:24px;padding:15px 18px;border:0;border-radius:12px;background:linear-gradient(90deg,#ffd86b,#ffb52e);color:#10131a;font-size:17px;font-weight:1000;cursor:pointer;box-shadow:0 0 22px #ffd86b33">확인했습니다 · 게임 시작</button>
@@ -2074,8 +2074,8 @@ const ctx =
     canvas.getContext('2d');
 
 
-// 축제 경쟁용: 5개 고정 스테이지. 모든 참가자에게 같은 미로가 생성되도록 시드 고정.
-const stages = [{s:25}, {s:29}, {s:33}, {s:37}, {s:41}];
+// 축제 기록용: 5개 고정 스테이지. 기존보다 미로 크기를 조금 줄여 플레이 부담을 낮춤.
+const stages = [{s:23}, {s:27}, {s:31}, {s:35}, {s:39}];
 // 이동 속도: 이 값(ms)마다 1칸 이동. 클수록 느려져서 최소 클리어 시간이 길어짐 (기존 60)
 const MOVE_INTERVAL_MS = 80;
 
@@ -4269,22 +4269,13 @@ function checkClear() {
    최종 클리어
 ========================================================= */
 
-function getFestivalRewardGrade(points) {
-    // 축제 보상: 5개 스테이지 전체 완주자에게만 지급. 총 포인트 기준
-    // GOLD: 봉지 과자 1개 / SILVER: 박스 과자 1개 / BRONZE: 참가상 사탕 (기준 점수는 FESTIVAL_POINTS에서 조절)
-    if (points >= FESTIVAL_POINTS.gold) return { grade:'GOLD', medal:'🥇', reward:'봉지 과자 1개', color:'#ffd86b' };
-    if (points >= FESTIVAL_POINTS.silver) return { grade:'SILVER', medal:'🥈', reward:'박스 과자 1개', color:'#d9e7f2' };
-    return { grade:'BRONZE', medal:'🥉', reward:'참가상 사탕', color:'#d9a477' };
-}
-
 function showFinalClear() {
     finalClearShown=true;
     const clearModal=document.getElementById('clear-modal');
     try { sessionStorage.setItem('exmaze-festival-new-record', String(festivalPlayerName||'').toLocaleLowerCase()); } catch(_) {}
     const elapsed=festivalRunStarted&&runStart>0?Math.max(0,(performance.now()-runStart)/1000):0;
     const totalPts=festivalTotalPoints();
-    const reward=getFestivalRewardGrade(totalPts);
-    saveFestivalProgress(stages.length-1,elapsed,true,totalPts,{grade:reward.grade,reward:reward.reward});
+    saveFestivalProgress(stages.length-1,elapsed,true,totalPts);
     const stageLine=stages.map((_,i)=>String(festivalStagePoints[i]||0)).join(' / ');
     clearModal.innerHTML=`
         <div class="clear-panel">
@@ -4293,11 +4284,7 @@ function showFinalClear() {
             <div class="clear-record">PLAYER: ${escapeFestivalText(festivalPlayerName)} · TIME ${formatFestivalTime(elapsed)}</div>
             <div style="margin:14px auto 2px;font-size:40px;font-weight:1000;color:#fff;text-shadow:0 0 18px #25bfffaa">${totalPts.toLocaleString()} <span style="font-size:20px">PTS</span></div>
             <div class="clear-message" style="font-size:12px;margin:2px auto 8px">스테이지별 포인트: ${stageLine}</div>
-            <div style="margin:8px auto 8px;color:${reward.color};font-size:34px;font-weight:1000;text-shadow:0 0 20px ${reward.color}55">${reward.medal} ${reward.grade}</div>
-            <div style="font-size:18px;font-weight:900;margin-bottom:8px">보상: ${reward.reward}</div>
-            <div class="clear-message" style="font-size:12px;margin:8px auto">보상 기준: ${FESTIVAL_POINTS.gold.toLocaleString()}점 이상 봉지 과자 · ${FESTIVAL_POINTS.silver.toLocaleString()}점 이상 박스 과자 · 그 외 참가상 사탕</div>
-            <div class="clear-message">${reward.grade==='GOLD'?'최고 등급! 봉지 과자 보상을 획득했습니다!':reward.grade==='SILVER'?'훌륭해요! 박스 과자 보상을 획득했습니다!':'완주 성공! 참가상 사탕을 받을 수 있습니다!'}</div>
-            <div class="clear-message" style="font-size:11px;margin-top:6px">※ 실제 보상은 부스 진행자에게 결과 화면을 보여 주세요.</div>
+            <div class="clear-message" style="font-size:14px;margin:8px auto">포인트는 기록용으로 저장됩니다. 별도의 보상은 없습니다.</div>
             <button class="start-btn" onclick="openLeaderboard()">🥇 VIEW LEADERBOARD</button>
             <button class="lobby-back" onclick="returnToStart()">↩ 돌아가기</button>
         </div>`;
