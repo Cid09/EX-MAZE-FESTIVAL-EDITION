@@ -1623,6 +1623,11 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 #splash-pips i{display:inline-block;width:clamp(12px,1.8vw,18px);height:clamp(12px,1.8vw,18px);margin:0 clamp(5px,.8vw,9px);border:2px solid rgba(110,225,255,.55);border-radius:3px;background:transparent;transition:background .15s,box-shadow .15s,transform .15s}
 #splash-pips i.lit{background:#7be8ff;box-shadow:0 0 14px #25bfff,0 0 30px #25bfff88;transform:scale(1.25)}
 #splash-pips i.lit.last{background:#ffd65a;border-color:#ffe69a;box-shadow:0 0 16px #ffc83a,0 0 34px #ffc83a88}
+#splash-slam{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-weight:1000;font-size:clamp(64px,15vw,200px);letter-spacing:.03em;color:#fff;text-shadow:0 0 30px #ffc83aaa,0 0 80px #ff9a1f88;opacity:0;pointer-events:none;z-index:2;white-space:nowrap}
+#splash-slam.on{animation:splashSlam .75s cubic-bezier(.2,.9,.2,1) both}
+@keyframes splashSlam{0%{opacity:0;transform:translateY(-50%) scale(3.2);filter:blur(14px)}22%{opacity:1;transform:translateY(-50%) scale(1);filter:blur(0)}30%{transform:translateY(-50%) scale(1.06)}70%{opacity:1;transform:translateY(-50%) scale(1)}100%{opacity:0;transform:translateY(-50%) scale(1.15)}}
+#splash-sub{position:absolute;left:0;right:0;text-align:center;font-weight:900;letter-spacing:.6em;font-size:clamp(10px,1.6vw,17px);color:#ffe28a;text-shadow:0 0 12px #ffc83a99;opacity:0;transition:opacity .6s ease;pointer-events:none;z-index:1;white-space:nowrap}
+#splash-sub.on{opacity:1}
 </style>
 </head>
 
@@ -2066,6 +2071,8 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
     <div id="splash-logo" aria-hidden="true"></div>
     <div id="splash-tagline" aria-hidden="true"></div>
     <div id="splash-pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="last"></i></div>
+    <div id="splash-slam" aria-hidden="true">ESCAPE!</div>
+    <div id="splash-sub" aria-hidden="true">FESTIVAL EDITION</div>
     <div id="splash-boot" aria-hidden="true"><div id="splash-boot-text"></div><div id="splash-boot-bar"><i></i></div></div>
     <div id="splash-flash"></div>
     <button id="splash-start" type="button">START</button>
@@ -4680,10 +4687,13 @@ window.addEventListener(
     if (!splash) return;
 
     const TUNE = {
+        crtSec: 0.6,          // 맨 처음 'CRT 전원 켜짐' 연출 시간(초)
         bootSec: 1.0,         // START 직후 '부팅' 연출 시간(초)
         fillSec: 1.4,         // 블록이 화면을 다 채우는 데 걸리는 시간(초)
-        mazeSec: 2.2,         // 빛이 미로를 달리는 시간(초). 길을 헤매는 길이에 따라 속도가 자동 조절됨
-        logoHoldSec: 3.3,     // 도착 후 벽이 로고 글자로 조립되고 로고가 켜져 머무는 시간(초)
+        montageSec: 0.9,      // 블록이 걷힌 뒤 '5개 스테이지 미리보기'가 나오는 시간(초)
+        slamSec: 0.6,         // 출구 도착 후 'ESCAPE!' 글자가 박히는 시간(초)
+        mazeSec: 2.5,         // 빛이 미로를 달리는 시간(초). 길을 헤매는 길이에 따라 속도가 자동 조절됨
+        logoHoldSec: 4.4,     // 도착 후 벽이 로고 글자로 조립되고 로고가 켜져 머무는 시간(초)
         breakSec: 1.1,        // 블록이 무너지며 로비가 나타나는 시간(초)
         gravity: 5200,        // 블록 낙하 가속도
         volume: 1.0,          // 코드로 합성한 효과음(쌓이는 소리 등) 크기 배율 (0이면 무음)
@@ -4718,6 +4728,10 @@ window.addEventListener(
     const bootEl = document.getElementById('splash-boot');
     const bootTextEl = document.getElementById('splash-boot-text');
     const bootBarEl = bootEl ? bootEl.querySelector('#splash-boot-bar i') : null;
+    const slamEl = document.getElementById('splash-slam');
+    const subEl = document.getElementById('splash-sub');
+    const cl01 = (t) => Math.min(1, Math.max(0, t));
+    let thumbs = null, finaleDone = false;
     let streaks = [], raysT0 = null, pipsLit = 0;
     function addStreak(x, y, big){ streaks.push({ x, y, t0: -1, dur: big ? 0.9 : 0.7 }); }
     let rings = [];                // 충격파 링
@@ -4964,6 +4978,73 @@ window.addEventListener(
         }
         wallList = blocks.filter(b => b.type === 'wall');
     }
+    function buildThumbs(){                   // 스테이지 테마 색으로 그린 작은 미로 5개
+        thumbs = null;
+        try {
+            if (typeof STAGE_THEMES === 'undefined') return;
+            const T = Math.round(Math.max(64, Math.min(132, W * 0.12)));
+            const list = [];
+            for (let k = 0; k < 5; k++){
+                const th = STAGE_THEMES[k] || STAGE_THEMES[0];
+                const c = document.createElement('canvas');
+                c.width = Math.ceil(T * DPR); c.height = Math.ceil(T * DPR);
+                const g = c.getContext('2d'); g.scale(DPR, DPR);
+                const n = 11, cs = T / n, m = carveMaze(n, n);
+                g.fillStyle = th.floor; g.fillRect(0, 0, T, T);
+                for (let y = 0; y < n; y++) for (let x = 0; x < n; x++){
+                    if (m[y][x] !== 1) continue;
+                    g.fillStyle = th.wall; g.fillRect(x * cs, y * cs, cs + 0.5, cs + 0.5);
+                    g.strokeStyle = th.edge.replace(/0\.\d+\)/, '0.9)'); g.lineWidth = 1; g.strokeRect(x * cs + 0.5, y * cs + 0.5, cs - 1, cs - 1);
+                }
+                list.push(c);
+            }
+            thumbs = { T, list };
+        } catch(e){ thumbs = null; }
+    }
+    function drawMontage(now){                // 블록이 걷힌 직후, 5개 스테이지 썸네일이 차례로 켜짐
+        if (clearAt === null || !thumbs || dotStart === null || now < clearAt + 0.25 || now > dotStart) return;
+        const T = thumbs.T, gap = T * 0.28, total = 5 * T + 4 * gap;
+        const x0 = (W - total) / 2, y0 = Math.max(26, H * 0.10), t0 = clearAt + 0.25;
+        const fo = 1 - cl01((now - (dotStart - 0.2)) / 0.2);
+        ctx.save();
+        ctx.globalAlpha = fo * 0.78 * cl01((now - t0) / 0.2);
+        ctx.fillStyle = 'rgba(2,8,16,0.9)'; ctx.fillRect(x0 - gap, y0 - gap, total + 2 * gap, T + gap * 2.4);
+        ctx.strokeStyle = 'rgba(110,225,255,0.8)'; ctx.lineWidth = 2; ctx.strokeRect(x0 - gap, y0 - gap, total + 2 * gap, T + gap * 2.4);
+        for (let k = 0; k < 5; k++){
+            const p = cl01((now - (t0 + 0.05 + k * 0.15)) / 0.28);
+            if (p <= 0) continue;
+            const c1 = 1.70158, e = 1 + (c1 + 1) * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2), sc = 0.4 + 0.6 * e;
+            const cx = x0 + k * (T + gap) + T / 2, cy = y0 + T / 2;
+            ctx.globalAlpha = fo * p;
+            ctx.drawImage(thumbs.list[k], cx - T * sc / 2, cy - T * sc / 2, T * sc, T * sc);
+            ctx.strokeStyle = 'rgba(190,240,255,' + (0.9 - 0.5 * p).toFixed(2) + ')'; ctx.lineWidth = 2;
+            ctx.strokeRect(cx - T * sc / 2, cy - T * sc / 2, T * sc, T * sc);
+            ctx.fillStyle = '#bfefff'; ctx.font = '900 ' + Math.round(T * 0.16) + 'px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('0' + (k + 1), cx, y0 + T + gap * 0.95);
+        }
+        ctx.restore();
+    }
+    function drawCRT(now){                    // 맨 처음: 가로 빛줄이 번지며 화면이 켜짐
+        const c = cl01((now + TUNE.bootSec + TUNE.crtSec) / TUNE.crtSec);
+        if (c <= 0) return;
+        const cy = H / 2;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        if (c < 0.45){
+            const p = c / 0.45, w = W * (0.05 + 0.95 * (1 - Math.pow(1 - p, 3)));
+            ctx.fillStyle = 'rgba(235,252,255,0.95)'; ctx.fillRect((W - w) / 2, cy - 1.5, w, 3);
+            ctx.fillStyle = 'rgba(90,210,255,0.35)'; ctx.fillRect((W - w) / 2, cy - 9, w, 18);
+        } else {
+            const p = (c - 0.45) / 0.55, h = 3 + (H - 3) * (1 - Math.pow(1 - p, 3));
+            ctx.fillStyle = 'rgba(200,240,255,' + (0.05 + 0.8 * (1 - p)).toFixed(3) + ')'; ctx.fillRect(0, cy - h / 2, W, h);
+            ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * (1 - p)).toFixed(3) + ')'; ctx.fillRect(0, cy - 1.5, W, 3);
+            for (let i = 0; i < 26; i++){
+                ctx.fillStyle = 'rgba(180,230,255,' + (0.18 * (1 - p)).toFixed(3) + ')';
+                ctx.fillRect(0, cy + (Math.random() - 0.5) * h, W, 1 + Math.random() * 2);
+            }
+        }
+        ctx.restore();
+    }
     function drawBlock(x, y, s, color, boost){
         ctx.fillStyle = color; ctx.fillRect(x, y, s + 0.5, s + 0.5);
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
@@ -5160,7 +5241,8 @@ window.addEventListener(
         const w = logo.offsetWidth, h = logo.offsetHeight;
         logo.style.transform = 'translate(' + Math.round((W - w) / 2) + 'px,' + Math.round((H - h) / 2) + 'px) scale(1)';
         if (tagEl){ tagEl.textContent = ''; tagEl.style.top = Math.round((H + h) / 2 + 12) + 'px'; }
-        if (pipsEl){ pipsEl.style.top = Math.round((H + h) / 2 + 12 + Math.max(34, Math.min(52, H * 0.05))) + 'px'; [].forEach.call(pipsEl.children, c => c.classList.remove('lit')); pipsLit = 0; }
+        if (pipsEl){ pipsEl.style.top = Math.round((H + h) / 2 + 12 + Math.max(34, Math.min(52, H * 0.05))) + 'px'; [].forEach.call(pipsEl.children, c => c.classList.remove('lit')); pipsLit = 0; finaleDone = false;
+            if (subEl) subEl.style.top = Math.round((H + h) / 2 + 12 + Math.max(34, Math.min(52, H * 0.05)) + 40) + 'px'; }
     }
     function flyLogoToLobby(){
         const target = document.querySelector('#start-modal .festival-title');
@@ -5183,7 +5265,7 @@ window.addEventListener(
     /* ---------- 진행 ---------- */
     function startClear(now){                 // 블록이 가득 찬 순간: 번쩍 + 길 부분만 녹아 사라짐 → 미로 완성
         clearAt = now;
-        dotStart = now + 0.5;
+        dotStart = now + 0.5 + TUNE.montageSec;
         mz.slowSteps = Math.max(4, Math.min(10, Math.round(mz.route.length * 0.06)));
         mz.slowFactor = 0.33;
         dotEnd = dotStart + timeAtIndex(mz.route.length - 1);
@@ -5199,6 +5281,7 @@ window.addEventListener(
             riserNoise(arrT - 0.7, 0.7, 0.10);
             noise(ac.currentTime + (dotStart - now) + timeAtIndex(mz.route.length - 1 - mz.slowSteps), 0.5, 0.13, 4200, 260);   // 슬로모션 시작 '쉬이이' 소리
             impact(arrT + 0.01, true);
+            for (let k = 0; k < 5; k++) tone(ac.currentTime + 0.3 + k * 0.15, 500 + k * 140, 0.09, 0.06, k === 4 ? 'sine' : 'triangle');   // 스테이지 썸네일 점등음
             const base = ac.currentTime + (dotStart - now);     // 달리는 동안 가벼운 틱 소리
             for (let i = 0; i < mz.route.length; i += 4)
                 tone(base + timeAtIndex(i), 700 + ((i / 4) % 8) * 60, 0.045, 0.03, 'triangle');
@@ -5214,8 +5297,9 @@ window.addEventListener(
         doFlash(exx, exy);
         spawnSparks(exx, exy);
         addStreak(exx, exy, true);                               // 렌즈 플레어(가로 빛줄기)
+        if (slamEl) slamEl.classList.add('on');                  // 'ESCAPE!'가 쾅 하고 박힘
         buildAssembly(now);                                      // 남은 벽 블록들이 날아가 EX:MAZE 글자를 만듦
-        logoAt = now + (asm ? 1.5 : 0.35);
+        logoAt = now + TUNE.slamSec + (asm ? 1.5 : 0.35);
         shake(20);
         addRing(exx, exy, Math.hypot(W, H) * 0.55, 'rgba(255,224,130,', 0.95);
         addRing(exx, exy, Math.hypot(W, H) * 0.35, 'rgba(170,240,255,', 0.7);
@@ -5270,7 +5354,7 @@ window.addEventListener(
                 w.asm = { tx: left + pt[0] - s2 / 2, ty: top + pt[1] - s2 / 2, s: s2,
                           delay: (k / pts.length) * 0.35 + Math.random() * 0.08, dur: 0.55 };
             });
-            asm = { t0: now + 0.3, fadeAt: null };
+            asm = { t0: now + 0.3 + TUNE.slamSec, fadeAt: null };
         } catch(e){ asm = null; }
     }
     function drawAssembling(b, now){
@@ -5308,6 +5392,7 @@ window.addEventListener(
         splash.classList.add('clear');
         if (tagEl) tagEl.classList.remove('on');
         if (pipsEl) pipsEl.classList.remove('on');
+        if (subEl) subEl.classList.remove('on');
         raysT0 = null;
         fadeIntroMusic();
         flyLogoToLobby();
@@ -5346,7 +5431,9 @@ window.addEventListener(
         ctx.clearRect(0, 0, W, H);
 
         // 시작 직후 부팅 연출: 빛줄기가 위에서 아래로 훑고 진행 막대가 차오름
-        if (now < 0){
+        if (now < -TUNE.bootSec){
+            drawCRT(now);
+        } else if (now < 0){
             const bp = Math.min(1, Math.max(0, (now + TUNE.bootSec) / TUNE.bootSec));
             if (bootEl) bootEl.classList.add('on');
             if (bootBarEl) bootBarEl.style.width = Math.round(bp * 100) + '%';
@@ -5397,6 +5484,14 @@ window.addEventListener(
                     spawnSparks(p[0], p[1], 18, ['#ff7a5a', '#ffb347', '#ffffff'], 120, 420);
                 }
             }
+        }
+
+        // 달리는 동안 혜성 꼬리 입자
+        if (rp && arriveAt === null && breakAt === null){
+            const cc = ['#55d9ff', '#9eeaff', '#b48cff', '#ffffff'];
+            for (let q = 0; q < 2; q++)
+                particles.push({ x: rp.x, y: rp.y, vx: (Math.random() - 0.5) * 90, vy: (Math.random() - 0.5) * 90, life: 0,
+                    max: 0.3 + Math.random() * 0.3, s: 2 + Math.random() * 3, c: cc[Math.floor(Math.random() * cc.length)] });
         }
 
         // 1) 길 바닥 (블록이 녹은 자리에 은은한 빛 + 격자점)
@@ -5470,6 +5565,7 @@ window.addEventListener(
 
         // 3) 포털 + 달리는 빛 + 정답 길
         if (clearAt !== null) drawRunner(now, rp);
+        drawMontage(now);
 
         // 4) 반짝이 파티클
         if (particles.length){
@@ -5477,7 +5573,7 @@ window.addEventListener(
             for (let i = particles.length - 1; i >= 0; i--){
                 const p = particles[i];
                 p.life += dt; if (p.life >= p.max){ particles.splice(i, 1); continue; }
-                p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985; p.vy *= 0.985;
+                p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985; p.vy *= 0.985;
                 ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.c;
                 ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
                 ctx.fillRect(p.x - p.s * 1.6, p.y - 0.5, p.s * 3.2, 1);
@@ -5523,7 +5619,20 @@ window.addEventListener(
             while (pipsLit < 5 && now >= tagStart + 0.9 + pipsLit * 0.12){
                 pipsEl.children[pipsLit].classList.add('lit');
                 if (ac) tone(ac.currentTime, 600 + pipsLit * 150, 0.09, 0.07, pipsLit === 4 ? 'sine' : 'triangle');
-                if (pipsLit === 4){ shake(6); if (ac) tone(ac.currentTime + 0.05, 1568, 0.35, 0.06, 'sine'); }
+                if (pipsLit === 4){
+                    shake(6); if (ac) tone(ac.currentTime + 0.05, 1568, 0.35, 0.06, 'sine');
+                    if (!finaleDone){                                   // 색종이 폭죽 + 부제
+                        finaleDone = true;
+                        if (subEl) subEl.classList.add('on');
+                        const cf = ['#19c2ff', '#7d87ff', '#46e68c', '#be6eff', '#ff6e5a', '#ffd65a'];
+                        for (let q = 0; q < 120; q++){
+                            const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.15, sp = 500 + Math.random() * 700;
+                            particles.push({ x: W / 2, y: H * 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 1500, life: 0,
+                                max: 1.1 + Math.random() * 0.8, s: 4 + Math.random() * 6, c: cf[Math.floor(Math.random() * cf.length)] });
+                        }
+                        if (ac) [784, 988, 1175, 1568, 1976].forEach((f, k) => tone(ac.currentTime + 0.08 + k * 0.07, f, 0.28, 0.05, 'sine'));
+                    }
+                }
                 pipsLit++;
             }
         }
@@ -5577,17 +5686,21 @@ window.addEventListener(
         getAC();
         primeDing();
         playIntroMusic();
-        layout(); buildScene(); buildLogo();
+        layout(); buildScene(); buildLogo(); buildThumbs();
         const startDelay = 0.3;
-        const lead = startDelay + TUNE.bootSec;                  // 블록이 떨어지기 시작하기까지(버튼 사라짐 + 부팅 연출)
+        const lead = startDelay + TUNE.crtSec + TUNE.bootSec;                  // 블록이 떨어지기 시작하기까지(버튼 사라짐 + 부팅 연출)
         if (ac){
             const t = ac.currentTime;
+            // CRT 전원 켜짐: 쿵 + 지지직 + 올라가는 윙
+            tone(t + startDelay, 62, 0.35, 0.22, 'sine');
+            noise(t + startDelay, 0.5, 0.12, 9000, 400);
+            for (let k = 0; k < 7; k++) tone(t + startDelay + k * 0.075, 300 + k * 300, 0.07, 0.03, 'sawtooth');
             // 부팅 소리: 올라가는 스윕 + 타이핑 같은 틱
             const o = ac.createOscillator(), g = ac.createGain();
-            o.type = 'sine'; o.frequency.setValueAtTime(180, t + startDelay); o.frequency.exponentialRampToValueAtTime(1500, t + lead);
-            g.gain.setValueAtTime(0.0001, t + startDelay); g.gain.exponentialRampToValueAtTime(0.05 * TUNE.volume, t + startDelay + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + lead);
-            o.connect(g); g.connect(master); o.start(t + startDelay); o.stop(t + lead + 0.05);
-            for (let k = 0; k < Math.floor(TUNE.bootSec / 0.07); k++) tone(t + startDelay + k * 0.07, 1700 + (k % 3) * 120, 0.03, 0.025, 'square');
+            o.type = 'sine'; o.frequency.setValueAtTime(180, t + startDelay + TUNE.crtSec); o.frequency.exponentialRampToValueAtTime(1500, t + lead);
+            g.gain.setValueAtTime(0.0001, t + startDelay + TUNE.crtSec); g.gain.exponentialRampToValueAtTime(0.05 * TUNE.volume, t + startDelay + TUNE.crtSec + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + lead);
+            o.connect(g); g.connect(master); o.start(t + startDelay + TUNE.crtSec); o.stop(t + lead + 0.05);
+            for (let k = 0; k < Math.floor(TUNE.bootSec / 0.07); k++) tone(t + startDelay + TUNE.crtSec + k * 0.07, 1700 + (k % 3) * 120, 0.03, 0.025, 'square');
             cascadeSound(t + lead, Math.min(Math.max(maxLand - 0.1, 1), 3.2));
             riserNoise(t + lead + Math.max(0, maxLand + 0.15 - 1.0), 1.0, 0.16);   // 번쩍이는 순간까지 고조
         }
