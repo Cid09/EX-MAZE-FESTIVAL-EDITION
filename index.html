@@ -1613,6 +1613,16 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
 @keyframes cdGo{0%{transform:scale(.7);opacity:0}30%{transform:scale(1.15);opacity:1}100%{transform:scale(1.5);opacity:0}}
 #splash-tagline{position:absolute;left:0;right:0;text-align:center;font-weight:900;letter-spacing:.38em;font-size:clamp(12px,2.2vw,24px);color:#bfefff;text-shadow:0 0 12px #25bfffaa;opacity:0;transition:opacity .35s ease;pointer-events:none;z-index:1;white-space:nowrap}
 #splash-tagline.on{opacity:1}
+#splash-boot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,78vw);text-align:center;opacity:0;transition:opacity .25s ease;z-index:1;pointer-events:none}
+#splash-boot.on{opacity:1}
+#splash-boot-text{font-weight:900;letter-spacing:.3em;font-size:clamp(12px,2vw,20px);color:#bfefff;text-shadow:0 0 10px #25bfffaa;min-height:1.4em;margin-bottom:14px}
+#splash-boot-bar{height:7px;border:1px solid rgba(110,225,255,.7);border-radius:99px;overflow:hidden;background:rgba(10,40,70,.5)}
+#splash-boot-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#19c2ff,#7be8ff);box-shadow:0 0 12px #25bfff}
+#splash-pips{position:absolute;left:0;right:0;text-align:center;opacity:0;transition:opacity .3s ease;pointer-events:none;z-index:1;line-height:0}
+#splash-pips.on{opacity:1}
+#splash-pips i{display:inline-block;width:clamp(12px,1.8vw,18px);height:clamp(12px,1.8vw,18px);margin:0 clamp(5px,.8vw,9px);border:2px solid rgba(110,225,255,.55);border-radius:3px;background:transparent;transition:background .15s,box-shadow .15s,transform .15s}
+#splash-pips i.lit{background:#7be8ff;box-shadow:0 0 14px #25bfff,0 0 30px #25bfff88;transform:scale(1.25)}
+#splash-pips i.lit.last{background:#ffd65a;border-color:#ffe69a;box-shadow:0 0 16px #ffc83a,0 0 34px #ffc83a88}
 </style>
 </head>
 
@@ -2055,6 +2065,8 @@ input,textarea{ -webkit-user-select:text; user-select:text; touch-action:auto; }
     <div id="splash-logo-bg"></div>
     <div id="splash-logo" aria-hidden="true"></div>
     <div id="splash-tagline" aria-hidden="true"></div>
+    <div id="splash-pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="last"></i></div>
+    <div id="splash-boot" aria-hidden="true"><div id="splash-boot-text"></div><div id="splash-boot-bar"><i></i></div></div>
     <div id="splash-flash"></div>
     <button id="splash-start" type="button">START</button>
     <button id="splash-skip" type="button" aria-label="건너뛰기">SKIP <span>▶</span></button>
@@ -2096,6 +2108,20 @@ let camera = { x: 0, y: 0 };
 // Festival checkpoint progress: three fixed, sequential checkpoints per stage.
 let stageCheckpoints = [];
 let visitedCells = null;          // 지나온 칸 표시
+let playerTrail = [];             // 캐릭터 뒤에 남는 빛 꼬리(최근 위치)
+let fxParts = [], fxRings = [], fxLast = 0;   // 체크포인트 획득 등의 빛 효과
+function fxBurst(cx, cy, colors, n, vmin, vmax) {
+    const px = (cx + 0.5) * cSize, py = (cy + 0.5) * cSize;
+    for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, sp = (vmin + Math.random() * (vmax - vmin)) * cSize;
+        fxParts.push({ x: px, y: py, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0,
+            max: 0.5 + Math.random() * 0.6, s: Math.max(2, cSize * (0.06 + Math.random() * 0.08)),
+            c: colors[Math.floor(Math.random() * colors.length)] });
+    }
+}
+function fxRing(cx, cy, color, maxCells, dur) {
+    fxRings.push({ x: (cx + 0.5) * cSize, y: (cy + 0.5) * cSize, c: color, max: maxCells, dur: dur, t0: performance.now() });
+}
 let festivalMinSteps = 0;         // 시작→체크포인트 3개→출구 최단 걸음 수 (점수 기준)
 const STAGE_THEMES = [
     { wall:'#0b1b1e', floor:'#102d31', edge:'rgba(48, 207, 220, 0.14)',  trail:'rgba(120,235,245,0.08)' },  // 1 청록
@@ -2650,6 +2676,18 @@ function calcStagePoints(timeSec){
 }
 function festivalTotalPoints(){ return festivalStagePoints.reduce((a, b) => a + (Number(b) || 0), 0); }
 
+function runCountUps() {                  // 클리어 화면의 점수가 0에서부터 올라가는 연출
+    document.querySelectorAll('.cu').forEach(el => {
+        const to = Number(el.dataset.to) || 0, t0 = performance.now(), dur = 900;
+        const step = (now) => {
+            const pr = Math.min(1, (now - t0) / dur);
+            el.textContent = Math.round(to * (1 - Math.pow(1 - pr, 3))).toLocaleString();
+            if (pr < 1) requestAnimationFrame(step); else el.textContent = to.toLocaleString();
+        };
+        requestAnimationFrame(step);
+    });
+}
+
 function showStageIntro() {
     const overlay = document.getElementById('stage-intro');
     document.getElementById('intro-stage-number').innerText = `STAGE ${String(curIdx + 1).padStart(2,'0')}`;
@@ -2818,6 +2856,12 @@ function collectFestivalCheckpoint() {
     if (cp && player.x===cp.x && player.y===cp.y) {
         activeCheckpoint++;
         playCheckpointSound(activeCheckpoint >= 3);
+        fxBurst(cp.x, cp.y, ['#ffffff', '#9eeaff', '#55d9ff', '#ffd65a'], 34, 2.5, 6.5);
+        fxRing(cp.x, cp.y, 'rgba(120,235,255,', 3.2, 650);
+        if (activeCheckpoint >= 3) {                       // 3개 다 모으면 출구가 열리는 연출
+            fxBurst(gSize - 2, gSize - 2, ['#7dffb2', '#ffffff', '#ffd65a'], 46, 3, 8);
+            fxRing(gSize - 2, gSize - 2, 'rgba(125,255,178,', 5, 900);
+        }
         updateCheckpointHud();
         const hud=document.getElementById('checkpoint-hud');
         if (hud) {
@@ -2879,6 +2923,7 @@ function init() {
     maze = makeFairMaze(curIdx, gSize);
     visitedCells = Array.from({ length: gSize }, () => Array(gSize).fill(false));
     visitedCells[1][1] = true;
+    playerTrail = []; fxParts = []; fxRings = [];
 
     // Guarantee a walkable exit and approach tiles on every stage.
     if (maze && maze[gSize - 2]) {
@@ -3456,6 +3501,7 @@ function move(dir) {
             ny;
 
         if (visitedCells && visitedCells[ny]) visitedCells[ny][nx] = true;
+        playerTrail.push({ x: nx, y: ny }); if (playerTrail.length > 9) playerTrail.shift();
 
         // Festival checkpoint pickup must run after the player position changes.
         if (typeof collectFestivalCheckpoint === 'function') collectFestivalCheckpoint();
@@ -3692,6 +3738,21 @@ function renderLoop() {
             if (maze[y][x] === 0 && visitedCells && visitedCells[y] && visitedCells[y][x]) {
                 ctx.fillStyle = stageTheme().trail;
                 ctx.fillRect(x * cSize, y * cSize, cSize + 0.3, cSize + 0.3);
+            }
+            // 입체감: 벽은 윗면/왼쪽이 밝고 아래/오른쪽이 어둡게, 벽 바로 아래 바닥에는 그림자
+            if (maze[y][x] === 1) {
+                const e = Math.max(2, cSize * 0.09), bx = x * cSize, by = y * cSize;
+                ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                ctx.fillRect(bx, by, cSize, e); ctx.fillRect(bx, by, e, cSize);
+                ctx.fillStyle = 'rgba(0,0,0,0.30)';
+                ctx.fillRect(bx, by + cSize - e, cSize, e); ctx.fillRect(bx + cSize - e, by, e, cSize);
+            } else {
+                if (y > 0 && maze[y - 1][x] === 1) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.24)';
+                    ctx.fillRect(x * cSize, y * cSize, cSize, cSize * 0.28);
+                }
+                ctx.fillStyle = 'rgba(255,255,255,0.035)';
+                ctx.fillRect(x * cSize + cSize / 2 - 1, y * cSize + cSize / 2 - 1, 2, 2);
             }
 
         }
@@ -3973,6 +4034,14 @@ function renderLoop() {
         cSize / 2;
 
 
+    // 지나온 자리에 남는 빛 꼬리
+    for (let ti = 0; ti < playerTrail.length - 1; ti++) {
+        const tp = playerTrail[ti], f = (ti + 1) / playerTrail.length;
+        ctx.fillStyle = 'rgba(85,217,255,' + (0.05 + 0.20 * f).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(tp.x * cSize + cSize / 2, tp.y * cSize + cSize / 2, cSize * (0.14 + 0.24 * f), 0, Math.PI * 2);
+        ctx.fill();
+    }
     const playerGlow =
         ctx.createRadialGradient(
             px,
@@ -4039,8 +4108,42 @@ function renderLoop() {
     ctx.shadowBlur = 0;
 
 
+    // 체크포인트 빛 입자 / 링
+    {
+        const nowFx = performance.now();
+        const dtFx = Math.min(0.05, Math.max(0, (nowFx - fxLast) / 1000)); fxLast = nowFx;
+        if (fxParts.length || fxRings.length) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = fxRings.length - 1; i >= 0; i--) {
+                const r = fxRings[i], pr = (nowFx - r.t0) / r.dur;
+                if (pr >= 1) { fxRings.splice(i, 1); continue; }
+                const er = 1 - Math.pow(1 - pr, 3);
+                ctx.strokeStyle = r.c + (1 - pr).toFixed(3) + ')';
+                ctx.lineWidth = Math.max(1.5, cSize * 0.22 * (1 - pr));
+                ctx.beginPath(); ctx.arc(r.x, r.y, r.max * cSize * er, 0, Math.PI * 2); ctx.stroke();
+            }
+            for (let i = fxParts.length - 1; i >= 0; i--) {
+                const q = fxParts[i];
+                q.life += dtFx; if (q.life >= q.max) { fxParts.splice(i, 1); continue; }
+                q.x += q.vx * dtFx; q.y += q.vy * dtFx; q.vx *= 0.97; q.vy *= 0.97;
+                ctx.globalAlpha = 1 - q.life / q.max; ctx.fillStyle = q.c;
+                ctx.fillRect(q.x - q.s / 2, q.y - q.s / 2, q.s, q.s);
+            }
+            ctx.restore();
+        }
+    }
+
     // Stop camera transform before screen-space lighting and fog overlays.
     ctx.restore();
+
+    // 비네트: 화면 가장자리를 은은하게 어둡게 해서 중앙(캐릭터)에 시선이 모이게 함
+    {
+        const vcx = canvas.width / 2, vcy = canvas.height / 2;
+        const vg = ctx.createRadialGradient(vcx, vcy, Math.min(canvas.width, canvas.height) * 0.42, vcx, vcy, Math.hypot(canvas.width, canvas.height) * 0.62);
+        vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     /* DARKNESS SUPPORT: 플레이어 주변만 밝게, 나머지는 어둡지만 길은 희미하게 보이게 */
     if (selectedSupports.has('darkness') || specialActive('darkness')) {
@@ -4308,7 +4411,8 @@ function checkClear() {
 
     // (clear-stage 요소는 아래 panel.innerHTML이 매번 새로 그리므로 여기서 따로 갱신하지 않음)
     const panel=document.querySelector('#clear-modal .clear-panel');
-    panel.innerHTML=`<div class="clear-title">${isNewBest?'🏆 NEW RECORD':'STAGE CLEAR'}</div><div class="clear-stage">STAGE ${String(curIdx+1).padStart(2,'0')} COMPLETE</div><div class="clear-rank rank-${rank.toLowerCase()}">${rank}</div><div class="clear-record">TIME ${recordTime.toFixed(2)}s · BEST ${bestTime.toFixed(2)}s${isNewBest?' · NEW BEST':''}</div><div class="clear-record" style="color:#ffd65a;font-weight:1000;font-size:20px;margin-top:6px">+${stagePts} PTS · TOTAL ${totalPts} PTS</div><div class="clear-message">${curIdx<stages.length-1?'다음 스테이지를 준비하세요...':'EX:MAZE를 정복했습니다!'}</div>`;
+    panel.innerHTML=`<div class="clear-title">${isNewBest?'🏆 NEW RECORD':'STAGE CLEAR'}</div><div class="clear-stage">STAGE ${String(curIdx+1).padStart(2,'0')} COMPLETE</div><div class="clear-rank rank-${rank.toLowerCase()}">${rank}</div><div class="clear-record">TIME ${recordTime.toFixed(2)}s · BEST ${bestTime.toFixed(2)}s${isNewBest?' · NEW BEST':''}</div><div class="clear-record" style="color:#ffd65a;font-weight:1000;font-size:20px;margin-top:6px">+<span class="cu" data-to="${stagePts}">${stagePts}</span> PTS · TOTAL <span class="cu" data-to="${totalPts}">${totalPts}</span> PTS</div><div class="clear-message">${curIdx<stages.length-1?'다음 스테이지를 준비하세요...':'EX:MAZE를 정복했습니다!'}</div>`;
+setTimeout(runCountUps,30);
 
 
     clearModal.style.display =
@@ -4367,13 +4471,14 @@ function showFinalClear() {
             <div class="clear-title">🏆 EXTREME CLEAR</div>
             <div class="clear-stage">ALL 5 STAGES COMPLETE</div>
             <div class="clear-record">PLAYER: ${escapeFestivalText(festivalPlayerName)} · TIME ${formatFestivalTime(elapsed)}</div>
-            <div style="margin:14px auto 2px;font-size:40px;font-weight:1000;color:#fff;text-shadow:0 0 18px #25bfffaa">${totalPts.toLocaleString()} <span style="font-size:20px">PTS</span></div>
+            <div style="margin:14px auto 2px;font-size:40px;font-weight:1000;color:#fff;text-shadow:0 0 18px #25bfffaa"><span class="cu" data-to="${totalPts}">${totalPts.toLocaleString()}</span> <span style="font-size:20px">PTS</span></div>
             <div class="clear-message" style="font-size:12px;margin:2px auto 8px">스테이지별 포인트: ${stageLine}</div>
             <div class="clear-message" style="font-size:14px;margin:8px auto">포인트는 기록용으로 저장됩니다. 별도의 보상은 없습니다.</div>
             <button class="start-btn" onclick="openLeaderboard()">🥇 VIEW LEADERBOARD</button>
             <button class="lobby-back" onclick="returnToStart()">↩ 돌아가기</button>
         </div>`;
     clearModal.style.display='flex';
+    setTimeout(runCountUps,30);
 }
 function escapeFestivalText(value){return String(value||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function formatFestivalTime(seconds){const n=Math.max(0,Number(seconds)||0);return `${String(Math.floor(n/60)).padStart(2,'0')}:${(n%60).toFixed(2).padStart(5,'0')}`;}
@@ -4575,10 +4680,11 @@ window.addEventListener(
     if (!splash) return;
 
     const TUNE = {
-        fillSec: 1.2,         // 블록이 화면을 다 채우는 데 걸리는 시간(초)
-        mazeSec: 1.9,         // 빛이 미로를 달리는 시간(초). 길을 헤매는 길이에 따라 속도가 자동 조절됨
-        logoHoldSec: 2.5,     // 도착 후 벽이 로고 글자로 조립되고 로고가 켜져 머무는 시간(초)
-        breakSec: 0.9,        // 블록이 무너지며 로비가 나타나는 시간(초)
+        bootSec: 1.0,         // START 직후 '부팅' 연출 시간(초)
+        fillSec: 1.4,         // 블록이 화면을 다 채우는 데 걸리는 시간(초)
+        mazeSec: 2.2,         // 빛이 미로를 달리는 시간(초). 길을 헤매는 길이에 따라 속도가 자동 조절됨
+        logoHoldSec: 3.3,     // 도착 후 벽이 로고 글자로 조립되고 로고가 켜져 머무는 시간(초)
+        breakSec: 1.1,        // 블록이 무너지며 로비가 나타나는 시간(초)
         gravity: 5200,        // 블록 낙하 가속도
         volume: 1.0,          // 코드로 합성한 효과음(쌓이는 소리 등) 크기 배율 (0이면 무음)
         dingFile: 'effect2.mp3', // ★ 미로 출구에 도착할 때 나는 "띠링" 소리 파일 (index.html과 같은 폴더에 넣으세요)
@@ -4608,6 +4714,12 @@ window.addEventListener(
     let wallList = [], asm = null, logoShown = false, logoAt = 0, tagStart = null, bumpAt = -9;
     const TAGLINE = '5 STAGES · ONE ESCAPE';
     const tagEl = document.getElementById('splash-tagline');
+    const pipsEl = document.getElementById('splash-pips');
+    const bootEl = document.getElementById('splash-boot');
+    const bootTextEl = document.getElementById('splash-boot-text');
+    const bootBarEl = bootEl ? bootEl.querySelector('#splash-boot-bar i') : null;
+    let streaks = [], raysT0 = null, pipsLit = 0;
+    function addStreak(x, y, big){ streaks.push({ x, y, t0: -1, dur: big ? 0.9 : 0.7 }); }
     let rings = [];                // 충격파 링
 
     /* ---------- 소리 (WebAudio 합성 + 띠링은 mp3 파일) ---------- */
@@ -5048,6 +5160,7 @@ window.addEventListener(
         const w = logo.offsetWidth, h = logo.offsetHeight;
         logo.style.transform = 'translate(' + Math.round((W - w) / 2) + 'px,' + Math.round((H - h) / 2) + 'px) scale(1)';
         if (tagEl){ tagEl.textContent = ''; tagEl.style.top = Math.round((H + h) / 2 + 12) + 'px'; }
+        if (pipsEl){ pipsEl.style.top = Math.round((H + h) / 2 + 12 + Math.max(34, Math.min(52, H * 0.05))) + 'px'; [].forEach.call(pipsEl.children, c => c.classList.remove('lit')); pipsLit = 0; }
     }
     function flyLogoToLobby(){
         const target = document.querySelector('#start-modal .festival-title');
@@ -5100,6 +5213,7 @@ window.addEventListener(
         const [exx, exy] = cellPx(mz.gw - 2, mz.gh - 2);
         doFlash(exx, exy);
         spawnSparks(exx, exy);
+        addStreak(exx, exy, true);                               // 렌즈 플레어(가로 빛줄기)
         buildAssembly(now);                                      // 남은 벽 블록들이 날아가 EX:MAZE 글자를 만듦
         logoAt = now + (asm ? 1.5 : 0.35);
         shake(20);
@@ -5114,7 +5228,10 @@ window.addEventListener(
         logo.classList.add('glitch');
         if (asm) asm.fadeAt = now;
         tagStart = now;
+        raysT0 = now;                                           // 로고 뒤에서 빛줄기가 퍼짐
+        addStreak(W / 2, H / 2, true);
         if (tagEl) tagEl.classList.add('on');
+        if (pipsEl) pipsEl.classList.add('on');
         shake(14);
         addRing(W / 2, H / 2, Math.hypot(W, H) * 0.45, 'rgba(170,240,255,', 0.8);
     }
@@ -5190,6 +5307,8 @@ window.addEventListener(
         splash.style.background = 'transparent';
         splash.classList.add('clear');
         if (tagEl) tagEl.classList.remove('on');
+        if (pipsEl) pipsEl.classList.remove('on');
+        raysT0 = null;
         fadeIntroMusic();
         flyLogoToLobby();
         restartLobbyArrive();
@@ -5226,6 +5345,27 @@ window.addEventListener(
         const g = TUNE.gravity;
         ctx.clearRect(0, 0, W, H);
 
+        // 시작 직후 부팅 연출: 빛줄기가 위에서 아래로 훑고 진행 막대가 차오름
+        if (now < 0){
+            const bp = Math.min(1, Math.max(0, (now + TUNE.bootSec) / TUNE.bootSec));
+            if (bootEl) bootEl.classList.add('on');
+            if (bootBarEl) bootBarEl.style.width = Math.round(bp * 100) + '%';
+            if (bootTextEl){
+                const t = bp < 0.34 ? 'BOOTING EX:MAZE' : bp < 0.72 ? 'BUILDING MAZE' : bp < 1 ? 'SYSTEM READY' : 'GO';
+                if (bootTextEl.textContent !== t) bootTextEl.textContent = t;
+            }
+            const sy = bp * H;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            const sg = ctx.createLinearGradient(0, sy - 60, 0, sy + 6);
+            sg.addColorStop(0, 'rgba(60,200,255,0)'); sg.addColorStop(1, 'rgba(150,235,255,0.5)');
+            ctx.fillStyle = sg; ctx.fillRect(0, sy - 60, W, 66);
+            ctx.fillStyle = 'rgba(210,250,255,0.9)'; ctx.fillRect(0, sy, W, 2);
+            ctx.restore();
+        } else if (bootEl && bootEl.classList.contains('on')) {
+            bootEl.classList.remove('on');
+        }
+
         // 빛 위치 + 카메라
         const running = dotStart !== null && now >= dotStart;
         const rp = running ? runnerPos(now) : null;
@@ -5252,6 +5392,7 @@ window.addEventListener(
                 if (!de.fired && rp.u >= de.i){
                     de.fired = true;
                     bumpAt = now;
+                    shake(4);
                     const p = cellPx(mz.route[de.i][0], mz.route[de.i][1]);
                     spawnSparks(p[0], p[1], 18, ['#ff7a5a', '#ffb347', '#ffffff'], 120, 420);
                 }
@@ -5345,6 +5486,48 @@ window.addEventListener(
             ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
         }
 
+        // 로고 뒤에서 퍼지는 빛줄기 + 가로 렌즈 플레어
+        if (raysT0 !== null && breakAt === null){
+            const ra = Math.min(1, (now - raysT0) / 0.8) * 0.16;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.translate(W / 2, H / 2); ctx.rotate(now * 0.25);
+            const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.hypot(W, H) * 0.55);
+            rg.addColorStop(0, 'rgba(150,235,255,' + ra.toFixed(3) + ')'); rg.addColorStop(1, 'rgba(150,235,255,0)');
+            ctx.fillStyle = rg;
+            const R = Math.hypot(W, H) * 0.6;
+            for (let k = 0; k < 14; k++){
+                const a0 = (k / 14) * Math.PI * 2, a1 = a0 + Math.PI / 14 * 0.55;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0) * R, Math.sin(a0) * R); ctx.lineTo(Math.cos(a1) * R, Math.sin(a1) * R); ctx.closePath(); ctx.fill();
+            }
+            ctx.restore();
+        }
+        if (streaks.length){
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = streaks.length - 1; i >= 0; i--){
+                const st = streaks[i];
+                if (st.t0 < 0) st.t0 = now;
+                const pr = (now - st.t0) / st.dur;
+                if (pr >= 1){ streaks.splice(i, 1); continue; }
+                const w = W * (0.25 + 0.9 * (1 - Math.pow(1 - pr, 3))), al = Math.pow(1 - pr, 1.6);
+                const lg = ctx.createLinearGradient(st.x - w / 2, 0, st.x + w / 2, 0);
+                lg.addColorStop(0, 'rgba(120,225,255,0)'); lg.addColorStop(0.5, 'rgba(235,252,255,' + al.toFixed(3) + ')'); lg.addColorStop(1, 'rgba(120,225,255,0)');
+                ctx.fillStyle = lg;
+                ctx.fillRect(st.x - w / 2, st.y - 2.5, w, 5);
+                ctx.globalAlpha = al * 0.35; ctx.fillRect(st.x - w / 2, st.y - 14, w, 28); ctx.globalAlpha = 1;
+            }
+            ctx.restore();
+        }
+        if (tagStart !== null && breakAt === null && pipsEl){          // 5개 스테이지를 뜻하는 점이 하나씩 켜짐
+            while (pipsLit < 5 && now >= tagStart + 0.9 + pipsLit * 0.12){
+                pipsEl.children[pipsLit].classList.add('lit');
+                if (ac) tone(ac.currentTime, 600 + pipsLit * 150, 0.09, 0.07, pipsLit === 4 ? 'sine' : 'triangle');
+                if (pipsLit === 4){ shake(6); if (ac) tone(ac.currentTime + 0.05, 1568, 0.35, 0.06, 'sine'); }
+                pipsLit++;
+            }
+        }
+
         // 충격파 링
         if (rings.length){
             ctx.save();
@@ -5396,11 +5579,19 @@ window.addEventListener(
         playIntroMusic();
         layout(); buildScene(); buildLogo();
         const startDelay = 0.3;
+        const lead = startDelay + TUNE.bootSec;                  // 블록이 떨어지기 시작하기까지(버튼 사라짐 + 부팅 연출)
         if (ac){
-            cascadeSound(ac.currentTime + startDelay, Math.min(Math.max(maxLand - 0.1, 1), 3.2));
-            riserNoise(ac.currentTime + startDelay + Math.max(0, maxLand + 0.15 - 1.0), 1.0, 0.16);   // 번쩍이는 순간까지 고조
+            const t = ac.currentTime;
+            // 부팅 소리: 올라가는 스윕 + 타이핑 같은 틱
+            const o = ac.createOscillator(), g = ac.createGain();
+            o.type = 'sine'; o.frequency.setValueAtTime(180, t + startDelay); o.frequency.exponentialRampToValueAtTime(1500, t + lead);
+            g.gain.setValueAtTime(0.0001, t + startDelay); g.gain.exponentialRampToValueAtTime(0.05 * TUNE.volume, t + startDelay + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + lead);
+            o.connect(g); g.connect(master); o.start(t + startDelay); o.stop(t + lead + 0.05);
+            for (let k = 0; k < Math.floor(TUNE.bootSec / 0.07); k++) tone(t + startDelay + k * 0.07, 1700 + (k % 3) * 120, 0.03, 0.025, 'square');
+            cascadeSound(t + lead, Math.min(Math.max(maxLand - 0.1, 1), 3.2));
+            riserNoise(t + lead + Math.max(0, maxLand + 0.15 - 1.0), 1.0, 0.16);   // 번쩍이는 순간까지 고조
         }
-        t0 = performance.now() - (-startDelay * 1000);   // 버튼이 사라진 뒤 블록이 떨어지기 시작
+        t0 = performance.now() + lead * 1000;            // 버튼이 사라지고 부팅 연출이 끝난 뒤 블록이 떨어지기 시작
         lastNow = performance.now();
         raf = requestAnimationFrame(frame);
     }
