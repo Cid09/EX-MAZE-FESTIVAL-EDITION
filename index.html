@@ -2097,7 +2097,7 @@ const ctx =
 
 
 // 축제 기록용: 5개 고정 스테이지. 기존보다 미로 크기를 조금 줄여 플레이 부담을 낮춤.
-const stages = [{s:21}, {s:25}, {s:29}, {s:33}, {s:37}];
+const stages = [{s:31}, {s:35}, {s:39}, {s:43}, {s:47}];   // 방과 광장이 있는 더 큰 미로
 // 이동 속도: 이 값(ms)마다 1칸 이동. 클수록 느려져서 최소 클리어 시간이 길어짐 (기존 60)
 const MOVE_INTERVAL_MS = 80;
 
@@ -2931,6 +2931,7 @@ function init() {
     visitedCells = Array.from({ length: gSize }, () => Array(gSize).fill(false));
     visitedCells[1][1] = true;
     playerTrail = []; fxParts = []; fxRings = [];
+    buildDecor();
 
     // Guarantee a walkable exit and approach tiles on every stage.
     if (maze && maze[gSize - 2]) {
@@ -3088,8 +3089,8 @@ function teleport() {
    - 스테이지별 목표 최단 경로 길이(걸음 수). 이 길이 ±허용오차 안에 들어오는 미로가 나올 때까지 다시 생성
    - 미로 크기(stages의 s)를 바꾸면 이 값도 같이 조정하세요. 총합이 클수록 전체 플레이 시간이 길어짐
 ========================================================= */
-const FESTIVAL_MAZE_TARGETS = [110, 140, 170, 200, 240];   // 우회로를 뚫은 뒤 기준. 총합이 클수록 전체 플레이 시간이 길어짐
-const FESTIVAL_BRAID = 0.03;               // 벽을 뚫어 우회로를 만드는 비율 (0이면 우회로 없음, 클수록 지름길이 많아짐)
+const FESTIVAL_MAZE_TARGETS = [120, 132, 152, 168, 188];   // 우회로를 뚫은 뒤 기준. 총합이 클수록 전체 플레이 시간이 길어짐
+const FESTIVAL_BRAID = 0.02;               // 벽을 뚫어 우회로를 만드는 비율 (0이면 우회로 없음, 클수록 지름길이 많아짐)
 const FESTIVAL_MAZE_TOLERANCE = 0.10;      // ±10%
 function mazeShortestSteps(m, size) {
     const q = [[1, 1, 0]], seen = new Set(['1,1']);
@@ -3112,7 +3113,27 @@ function braidMaze(m, size, p) {         // 막다른 길 사이의 벽을 일�
         if ((h || v) && Math.random() < p) m[y][x] = 0;
     }
 }
+const FESTIVAL_ROOMS = [3, 4, 5, 6, 7];    // 스테이지별 열린 방(광장) 개수
+let lastMazeRooms = [];                    // 마지막으로 뽑힌 미로의 방 목록
+function carveRooms(m, size, count) {      // 3x3 / 5x3 / 5x5(가운데 기둥) 크기의 열린 방을 만든다. 벽만 뚫으므로 연결은 그대로 유지됨
+    const rooms = [];
+    for (let t = 0; t < count * 12 && rooms.length < count; t++) {
+        const w = Math.random() < 0.5 ? 3 : 5, h = Math.random() < 0.5 ? 3 : 5;
+        const nx = Math.floor((size - 2 - w) / 2) + 1, ny = Math.floor((size - 2 - h) / 2) + 1;
+        const x0 = 1 + 2 * Math.floor(Math.random() * nx), y0 = 1 + 2 * Math.floor(Math.random() * ny);
+        if (x0 + w - 1 > size - 2 || y0 + h - 1 > size - 2) continue;
+        const near = (cx, cy) => x0 - 4 <= cx && cx <= x0 + w - 1 + 4 && y0 - 4 <= cy && cy <= y0 + h - 1 + 4;
+        if (near(1, 1) || near(size - 2, size - 2)) continue;                 // 시작/출구 근처는 피함
+        if (rooms.some(r => x0 <= r.x1 + 2 && x0 + w - 1 >= r.x0 - 2 && y0 <= r.y1 + 2 && y0 + h - 1 >= r.y0 - 2)) continue;
+        const pillar = (w === 5 && h === 5);
+        for (let yy = y0; yy < y0 + h; yy++) for (let xx = x0; xx < x0 + w; xx++) m[yy][xx] = 0;
+        if (pillar) m[y0 + 2][x0 + 2] = 1;
+        rooms.push({ x0, y0, x1: x0 + w - 1, y1: y0 + h - 1, cx: x0 + (w - 1) / 2, cy: y0 + (h - 1) / 2, pillar, k: rooms.length });
+    }
+    return rooms;
+}
 function makeFairMaze(idx, size) {
+    lastMazeRooms = [];
     const target = FESTIVAL_MAZE_TARGETS[idx];
     if (!target) return makeMaze(size);
     let best = null, bestDiff = Infinity;
@@ -3120,10 +3141,11 @@ function makeFairMaze(idx, size) {
         const m = makeMaze(size);
         m[size - 2][size - 3] = 0; m[size - 3][size - 2] = 0;      // init()과 동일하게 출구 접근 칸 확보
         braidMaze(m, size, FESTIVAL_BRAID);
+        const rooms = carveRooms(m, size, FESTIVAL_ROOMS[idx] || 3);
         const steps = mazeShortestSteps(m, size);
         if (steps < 0) continue;
         const diff = Math.abs(steps - target) / target;
-        if (diff < bestDiff) { best = m; bestDiff = diff; }
+        if (diff < bestDiff) { best = m; bestDiff = diff; lastMazeRooms = rooms; }
         if (diff <= FESTIVAL_MAZE_TOLERANCE) break;
     }
     return best || makeMaze(size);
@@ -3579,6 +3601,156 @@ function showGameOver(message) {
    렌더링
 ========================================================= */
 
+/* =========================================================
+   현실감 있는 미로 그리기: 2.5D 벽(윗면+앞면), 스테이지별 재질 타일, 벽 횃불, 방 한가운데 표지물, 떠다니는 먼지
+========================================================= */
+let stageTilesCache = null;
+let mazeRooms = [], mazeTorches = [], dustMotes = [];
+const STAGE_MATERIALS = ['stone', 'metal', 'hedge', 'crypt', 'lava'];
+
+function mixHex(hex, t, toward) {          // hex 색을 흰색(255)/검정(0) 쪽으로 t만큼 섞기
+    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    return 'rgb(' + Math.round(r + (toward - r) * t) + ',' + Math.round(g + (toward - g) * t) + ',' + Math.round(b + (toward - b) * t) + ')';
+}
+function seededRand(seed) { let v = seed * 9301 + 49297; return () => (v = (v * 9301 + 49297) % 233280) / 233280; }
+
+function buildStageTiles() {
+    const c = Math.max(8, Math.round(cSize)), H = Math.round(c * 0.40);
+    const th = stageTheme(), kind = STAGE_MATERIALS[curIdx] || 'stone';
+    const edge = th.edge.replace(/[\d.]+\)\s*$/, '0.85)');
+    const mk = (w, h, fn) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; fn(cv.getContext('2d')); return cv; };
+    const floors = [], tops = [], fronts = [];
+    for (let v = 0; v < 4; v++) {
+        const r = seededRand(v * 17 + curIdx * 101 + 3);
+        // 바닥
+        floors.push(mk(c, c, g => {
+            g.fillStyle = th.floor; g.fillRect(0, 0, c, c);
+            for (let i = 0; i < 16; i++) {
+                g.fillStyle = r() < 0.5 ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.035)';
+                const sz = 2 + r() * c * 0.14; g.fillRect(r() * c, r() * c, sz, sz * (0.5 + r()));
+            }
+            g.strokeStyle = 'rgba(0,0,0,0.24)'; g.lineWidth = 1; g.strokeRect(0.5, 0.5, c - 1, c - 1);
+            g.strokeStyle = 'rgba(255,255,255,0.045)'; g.beginPath(); g.moveTo(1.5, 1.5); g.lineTo(c - 1.5, 1.5); g.stroke();
+            if (v === 2) { g.strokeStyle = 'rgba(0,0,0,0.32)'; g.beginPath(); g.moveTo(r() * c, 0); g.lineTo(r() * c, c * 0.5); g.lineTo(r() * c, c); g.stroke(); }
+            if (v === 1 && (kind === 'hedge' || kind === 'stone')) { g.fillStyle = 'rgba(70,150,80,0.10)'; g.beginPath(); g.arc(r() * c, r() * c, c * 0.25, 0, 6.3); g.fill(); }
+            if (kind === 'lava' && v === 3) { g.strokeStyle = 'rgba(255,120,60,0.22)'; g.beginPath(); g.moveTo(0, r() * c); g.lineTo(c * 0.5, r() * c); g.lineTo(c, r() * c); g.stroke(); }
+        }));
+        // 벽 윗면
+        tops.push(mk(c, c, g => {
+            g.fillStyle = mixHex(th.wall, 0.22, 255); g.fillRect(0, 0, c, c);
+            for (let i = 0; i < 18; i++) {
+                g.fillStyle = r() < 0.5 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.06)';
+                const sz = 2 + r() * c * 0.16; g.fillRect(r() * c, r() * c, sz, sz * (0.6 + r() * 0.8));
+            }
+            if (kind === 'hedge') for (let i = 0; i < 14; i++) { g.fillStyle = r() < 0.5 ? 'rgba(40,120,50,0.45)' : 'rgba(110,200,90,0.28)'; g.beginPath(); g.arc(r() * c, r() * c, c * (0.08 + r() * 0.12), 0, 6.3); g.fill(); }
+            if (kind === 'metal') { g.strokeStyle = 'rgba(255,255,255,0.14)'; g.strokeRect(c * 0.12, c * 0.12, c * 0.76, c * 0.76); g.fillStyle = 'rgba(255,255,255,0.22)'; [[0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]].forEach(q => g.fillRect(c * q[0] - 1.5, c * q[1] - 1.5, 3, 3)); }
+            if (kind === 'crypt' || kind === 'lava') { g.strokeStyle = kind === 'lava' ? 'rgba(255,130,60,0.55)' : 'rgba(190,120,255,0.45)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(r() * c, 0); g.lineTo(r() * c, c * 0.55); g.lineTo(r() * c, c); g.stroke(); }
+            const bev = g.createLinearGradient(0, 0, c, c); bev.addColorStop(0, 'rgba(255,255,255,0.18)'); bev.addColorStop(1, 'rgba(0,0,0,0.22)');
+            g.fillStyle = bev; g.fillRect(0, 0, c, c);
+            g.strokeStyle = edge; g.lineWidth = 1.5; g.strokeRect(0.75, 0.75, c - 1.5, c - 1.5);
+        }));
+        // 벽 앞면(그늘진 면): 벽돌/패널 무늬
+        fronts.push(mk(c, H, g => {
+            g.fillStyle = mixHex(th.wall, 0.30, 0); g.fillRect(0, 0, c, H);
+            const rows = 2, rh = H / rows;
+            for (let ry = 0; ry < rows; ry++) {
+                const off = (ry + v) % 2 ? c * 0.5 : 0;
+                g.fillStyle = 'rgba(255,255,255,' + (0.04 + r() * 0.04).toFixed(3) + ')';
+                for (let bx = -off; bx < c; bx += c * 0.5) g.fillRect(bx + 1, ry * rh + 1, c * 0.5 - 2, rh - 2);
+                g.strokeStyle = 'rgba(0,0,0,0.42)'; g.lineWidth = 1;
+                g.beginPath(); g.moveTo(0, ry * rh); g.lineTo(c, ry * rh); g.stroke();
+                for (let bx = -off + c * 0.5; bx < c; bx += c * 0.5) { g.beginPath(); g.moveTo(bx, ry * rh); g.lineTo(bx, ry * rh + rh); g.stroke(); }
+            }
+            if (kind === 'hedge') for (let i = 0; i < 10; i++) { g.fillStyle = 'rgba(40,130,55,0.35)'; g.beginPath(); g.arc(r() * c, r() * H, c * 0.09, 0, 6.3); g.fill(); }
+            if (kind === 'lava' && v % 2 === 0) { g.strokeStyle = 'rgba(255,120,50,0.5)'; g.beginPath(); g.moveTo(r() * c, 0); g.lineTo(r() * c, H * 0.6); g.lineTo(r() * c, H); g.stroke(); }
+            if (kind === 'crypt' && v % 2 === 1) { g.strokeStyle = 'rgba(190,120,255,0.35)'; g.beginPath(); g.moveTo(r() * c, 0); g.lineTo(r() * c, H); g.stroke(); }
+            const sh = g.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(255,255,255,0.10)'); sh.addColorStop(0.15, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.40)');
+            g.fillStyle = sh; g.fillRect(0, 0, c, H);
+            g.strokeStyle = edge; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 0.5); g.lineTo(c, 0.5); g.stroke();
+        }));
+    }
+    return { key: curIdx + ':' + cSize, c, H, floors, tops, fronts };
+}
+function getStageTiles() {
+    const key = curIdx + ':' + cSize;
+    if (!stageTilesCache || stageTilesCache.key !== key) stageTilesCache = buildStageTiles();
+    return stageTilesCache;
+}
+
+function buildDecor() {                     // 벽 횃불 위치 + 방 표지물 + 먼지 입자 초기화
+    mazeRooms = lastMazeRooms || [];
+    mazeTorches = [];
+    const cand = [];
+    for (let y = 1; y < gSize - 2; y++) for (let x = 1; x < gSize - 1; x++)
+        if (maze[y][x] === 1 && maze[y + 1][x] === 0) cand.push({ x, y });
+    for (let i = cand.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+    const want = Math.max(5, Math.round(gSize * gSize / 95));
+    for (const c of cand) {
+        if (mazeTorches.length >= want) break;
+        if (mazeTorches.some(t => Math.abs(t.x - c.x) + Math.abs(t.y - c.y) < 6)) continue;
+        mazeTorches.push({ x: c.x, y: c.y, ph: Math.random() * 6.28 });
+    }
+    dustMotes = [];
+}
+
+function drawFlame(px, py, size, t, ph) {   // 작은 횃불 불꽃
+    const f = 0.8 + 0.2 * Math.sin(t / 85 + ph) + 0.08 * Math.sin(t / 31 + ph * 2);
+    ctx.fillStyle = '#3a2412'; ctx.fillRect(px - size * 0.05, py - size * 0.02, size * 0.1, size * 0.24);
+    ctx.fillStyle = 'rgba(255,150,40,0.95)';
+    ctx.beginPath(); ctx.moveTo(px - size * 0.12, py); ctx.quadraticCurveTo(px - size * 0.14, py - size * 0.2 * f, px, py - size * 0.36 * f); ctx.quadraticCurveTo(px + size * 0.14, py - size * 0.2 * f, px + size * 0.12, py); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,230,140,0.95)';
+    ctx.beginPath(); ctx.arc(px, py - size * 0.08, size * 0.07 * f, 0, Math.PI * 2); ctx.fill();
+}
+function drawTorches(T, t) {
+    for (const o of mazeTorches) {
+        const px = o.x * cSize + cSize / 2, py = o.y * cSize + cSize - T.H * 0.35;
+        const f = 0.82 + 0.18 * Math.sin(t / 85 + o.ph) + 0.06 * Math.sin(t / 31 + o.ph * 2);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(px, py, 0, px, py, cSize * 3.0);
+        g.addColorStop(0, 'rgba(255,170,70,' + (0.30 * f).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,140,40,0)');
+        ctx.fillStyle = g; ctx.fillRect(px - cSize * 3, py - cSize * 3, cSize * 6, cSize * 6);
+        ctx.restore();
+        drawFlame(px, py, cSize, t, o.ph);
+    }
+}
+function drawLandmarks(t) {                 // 방 한가운데 표지물(기둥 없는 방): 모양이 서로 달라서 '아까 그 방이다'를 알아볼 수 있음
+    const th = stageTheme();
+    for (const r of mazeRooms) {
+        if (r.pillar) continue;
+        const px = r.cx * cSize + cSize / 2, py = r.cy * cSize + cSize / 2, s = cSize * 0.34, kind = r.k % 5;
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.ellipse(px, py + s * 0.9, s * 1.1, s * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = mixHex(th.wall, 0.45, 255); ctx.strokeStyle = th.edge.replace(/[\d.]+\)\s*$/, '0.95)'); ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (kind === 0) { ctx.rect(px - s * 0.5, py - s * 0.9, s, s * 1.8); }
+        else if (kind === 1) { ctx.moveTo(px, py - s); ctx.lineTo(px + s * 0.8, py); ctx.lineTo(px, py + s); ctx.lineTo(px - s * 0.8, py); ctx.closePath(); }
+        else if (kind === 2) { ctx.moveTo(px, py - s); ctx.lineTo(px + s * 0.9, py + s * 0.8); ctx.lineTo(px - s * 0.9, py + s * 0.8); ctx.closePath(); }
+        else if (kind === 3) { for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? s * 0.45 : s; ctx.lineTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr); } ctx.closePath(); }
+        else { ctx.arc(px, py, s, 0, Math.PI * 2); }
+        ctx.fill(); ctx.stroke();
+        if (kind === 4) {                                          // 분수: 물빛이 일렁임
+            ctx.fillStyle = 'rgba(90,200,255,' + (0.35 + 0.15 * Math.sin(t / 300 + r.k)).toFixed(3) + ')';
+            ctx.beginPath(); ctx.arc(px, py, s * 0.62, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+function drawDust(t, dt) {                  // 공중에 떠다니는 먼지
+    const left = camera.x * cSize - cSize * 2, top = camera.y * cSize - cSize * 2;
+    const w = canvas.width + cSize * 4, h = canvas.height + cSize * 4;
+    while (dustMotes.length < 46) dustMotes.push({ x: left + Math.random() * w, y: top + Math.random() * h, vx: (Math.random() - 0.5) * 10, vy: -4 - Math.random() * 8, s: 1 + Math.random() * 2, ph: Math.random() * 6.28 });
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const d of dustMotes) {
+        d.x += d.vx * dt + Math.sin(t / 900 + d.ph) * 0.12; d.y += d.vy * dt;
+        if (d.x < left) d.x += w; if (d.x > left + w) d.x -= w; if (d.y < top) d.y += h; if (d.y > top + h) d.y -= h;
+        ctx.fillStyle = 'rgba(255,225,170,' + (0.10 + 0.08 * Math.sin(t / 700 + d.ph)).toFixed(3) + ')';
+        ctx.fillRect(d.x, d.y, d.s, d.s);
+    }
+    ctx.restore();
+}
+
 function renderLoop() {
 
     // Safety net for checkpoint pickup when the player is already on its tile.
@@ -3690,120 +3862,37 @@ function renderLoop() {
     ctx.save();
     ctx.translate(-camera.x * cSize, -camera.y * cSize);
 
-    /* 미로 */
-
-    for(
-        let y = 0;
-        y < gSize;
-        y++
-    ) {
-
-        for(
-            let x = 0;
-            x < gSize;
-            x++
-        ) {
-
-            if(
-                maze[y][x] === 1
-            ) {
-
-                // Screenshot-matched EX:MAZE walls: near-black teal with subtle cyan grid.
-                ctx.fillStyle = stageTheme().wall;
-
-            }
-
-            else {
-
-                // Keep corridors dark; the player and edges provide the light.
-                ctx.fillStyle = stageTheme().floor;
-
-            }
-
-
-            /* 출구 */
-
-            if(
-                x === gSize - 2 &&
-                y === gSize - 2
-            ) {
-
-                ctx.fillStyle =
-                    stageTheme().floor;
-
-            }
-
-
-            ctx.fillRect(
-                x * cSize,
-                y * cSize,
-                cSize + 0.3,
-                cSize + 0.3
-            );
-
-            // 지나온 길은 은은하게 표시
-            if (maze[y][x] === 0 && visitedCells && visitedCells[y] && visitedCells[y][x]) {
+    /* 미로: 바닥 → 그림자 → 표지물 → 2.5D 벽(위에서 아래 줄 순서) → 횃불 */
+    const TL = getStageTiles(), tNow = performance.now();
+    // 화면에 보이는 칸만 그려서 큰 미로에서도 가볍게 (벽 높이만큼 아래쪽 여유를 더 둠)
+    const visW = cSize > 0 ? canvas.width / cSize : gSize, visH = cSize > 0 ? canvas.height / cSize : gSize;
+    const vx0 = Math.max(0, Math.floor(camera.x) - 2), vx1 = Math.min(gSize - 1, Math.ceil(camera.x + visW) + 2);
+    const vy0 = Math.max(0, Math.floor(camera.y) - 2), vy1 = Math.min(gSize - 1, Math.ceil(camera.y + visH) + 3);
+    for (let y = vy0; y <= vy1; y++) {
+        for (let x = vx0; x <= vx1; x++) {
+            if (maze[y][x] === 1) continue;
+            ctx.drawImage(TL.floors[(x * 7 + y * 13) & 3], x * cSize, y * cSize, cSize + 0.3, cSize + 0.3);
+            if (visitedCells && visitedCells[y] && visitedCells[y][x]) {           // 지나온 길
                 ctx.fillStyle = stageTheme().trail;
                 ctx.fillRect(x * cSize, y * cSize, cSize + 0.3, cSize + 0.3);
             }
-            // 입체감: 벽은 윗면/왼쪽이 밝고 아래/오른쪽이 어둡게, 벽 바로 아래 바닥에는 그림자
-            if (maze[y][x] === 1) {
-                const e = Math.max(2, cSize * 0.09), bx = x * cSize, by = y * cSize;
-                ctx.fillStyle = 'rgba(255,255,255,0.08)';
-                ctx.fillRect(bx, by, cSize, e); ctx.fillRect(bx, by, e, cSize);
-                ctx.fillStyle = 'rgba(0,0,0,0.30)';
-                ctx.fillRect(bx, by + cSize - e, cSize, e); ctx.fillRect(bx + cSize - e, by, e, cSize);
-            } else {
-                if (y > 0 && maze[y - 1][x] === 1) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.24)';
-                    ctx.fillRect(x * cSize, y * cSize, cSize, cSize * 0.28);
-                }
-                ctx.fillStyle = 'rgba(255,255,255,0.035)';
-                ctx.fillRect(x * cSize + cSize / 2 - 1, y * cSize + cSize / 2 - 1, 2, 2);
+            if (y > 0 && maze[y - 1][x] === 1) {                                   // 벽 앞면 바로 아래 그림자
+                ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(x * cSize, y * cSize, cSize, cSize * 0.22);
+                ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(x * cSize, y * cSize + cSize * 0.22, cSize, cSize * 0.24);
             }
-
         }
-
     }
-
-
-    /* 벽 네온 */
-
-    ctx.strokeStyle =
-        stageTheme().edge;
-
-    ctx.lineWidth = 1;
-
-
-    for(
-        let y = 0;
-        y < gSize;
-        y++
-    ) {
-
-        for(
-            let x = 0;
-            x < gSize;
-            x++
-        ) {
-
-            if(
-                maze[y][x] === 1
-            ) {
-
-                ctx.strokeRect(
-                    x * cSize,
-                    y * cSize,
-                    cSize,
-                    cSize
-                );
-
-            }
-
+    drawLandmarks(tNow);
+    for (let y = vy0; y <= vy1; y++) {
+        for (let x = vx0; x <= vx1; x++) {
+            if (maze[y][x] !== 1) continue;
+            const v = (x * 5 + y * 11) & 3, px = x * cSize, py = y * cSize;
+            ctx.drawImage(TL.tops[v], px, py - TL.H, cSize + 0.3, cSize + 0.3);                       // 윗면(높이만큼 위로 올림)
+            if (y + 1 >= gSize || maze[y + 1][x] !== 1)
+                ctx.drawImage(TL.fronts[v], px, py + cSize - TL.H, cSize + 0.3, TL.H + 0.3);          // 앞면(보이는 곳만)
         }
-
     }
-
+    drawTorches(TL, tNow);
 
     /* 출구 빛 */
 
@@ -4119,6 +4208,15 @@ function renderLoop() {
     {
         const nowFx = performance.now();
         const dtFx = Math.min(0.05, Math.max(0, (nowFx - fxLast) / 1000)); fxLast = nowFx;
+        {   // 캐릭터 주변의 따뜻한 횃불빛(일렁임) + 먼지
+            const pcx = player.x * cSize + cSize / 2, pcy = player.y * cSize + cSize / 2;
+            const fl = 0.85 + 0.15 * Math.sin(nowFx / 90) + 0.05 * Math.sin(nowFx / 37);
+            const wg = ctx.createRadialGradient(pcx, pcy, 0, pcx, pcy, cSize * 6);
+            wg.addColorStop(0, 'rgba(255,200,120,' + (0.15 * fl).toFixed(3) + ')'); wg.addColorStop(1, 'rgba(255,200,120,0)');
+            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = wg;
+            ctx.fillRect(pcx - cSize * 6, pcy - cSize * 6, cSize * 12, cSize * 12); ctx.restore();
+            drawDust(nowFx, dtFx);
+        }
         if (fxParts.length || fxRings.length) {
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
